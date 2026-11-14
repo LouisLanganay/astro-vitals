@@ -4,9 +4,9 @@ use astro_vitals_core::baseline::{min_scale, series, sleep_hours, value};
 use astro_vitals_core::mission::{day_view, due_tasks, mission_day, status, streak};
 use astro_vitals_core::model::{
     AmslerCell, Assessment, Baseline, BodyRegion, Calibration, DailyAnswers, DailyCheck, Document,
-    DueTask, EyeResult, Indicator, IndicatorState, IndicatorStatus, Level, Notice, PvtInput,
-    PvtResult, PvtTrial, RedFlagKind, RuleSubject, RulesError, Symptom, SymptomKind, TaskKind,
-    ValidationError, VisionResult,
+    DueTask, EyeResult, FiredRule, Indicator, IndicatorState, IndicatorStatus, Level, Notice,
+    Packet, PvtInput, PvtResult, PvtTrial, RedFlagKind, RuleSubject, RulesError, Symptom,
+    SymptomKind, TaskKind, ValidationError, VisionResult,
 };
 use astro_vitals_core::rules::{self, RuleSet, evaluate};
 use astro_vitals_core::{packet, pvt, validate};
@@ -101,14 +101,12 @@ fn eye(acuity_logmar: f64, amsler_distortion: bool) -> EyeResult {
 }
 
 fn vision(doc: &mut Document, n: i32, left: EyeResult) {
-    doc.vision.insert(
-        day(n),
-        VisionResult {
-            date: day(n),
-            left,
-            right: eye(0.0, false),
-        },
-    );
+    vision_2(doc, n, left, eye(0.0, false));
+}
+
+fn vision_2(doc: &mut Document, n: i32, left: EyeResult, right: EyeResult) {
+    let date = day(n);
+    doc.vision.insert(date, VisionResult { date, left, right });
 }
 
 fn at(doc: &Document, n: i32) -> Assessment {
@@ -166,12 +164,65 @@ fn a_window_with_fewer_than_min_days_gives_not_enough_data() {
 
     put(&mut d, 5..6, short);
     let a = at(&d, 6);
+    assert!(a.fired.is_empty());
+    assert_eq!(state(&a, Indicator::FluidL), IndicatorState::NotEnoughData);
+
+    put(&mut d, 4..5, short);
+    let a = at(&d, 6);
     assert_eq!(ids(&a), ["sleep_3d_below_5h", "fluid_3d_below_2_5l"]);
     assert_eq!(a.level, Level::TellCmo);
     assert_eq!(state(&a, Indicator::FluidL), IndicatorState::SelfCare);
 
-    put(&mut d, 2..5, short);
+    put(&mut d, 2..4, short);
     assert!(ids(&at(&d, 6)).contains(&"sleep_7d_below_6h"));
+}
+
+#[test]
+fn an_indicator_with_only_drift_rules_and_one_value_is_not_enough_data() {
+    let mut d = doc();
+    put(&mut d, -14..0, |_| {});
+    put(&mut d, 10..11, |a| a.mood = 0);
+    let a = at(&d, 10);
+    assert!(a.drift_enabled);
+    assert!(a.fired.is_empty());
+    assert_eq!(indicator(&a, Indicator::Mood).mean_7d, Some(0.0));
+    for i in [Indicator::Mood, Indicator::Stress, Indicator::Tiredness] {
+        assert_eq!(state(&a, i), IndicatorState::NotEnoughData, "{i:?}");
+    }
+    put(&mut d, 7..10, |a| a.mood = 0);
+    let a = at(&d, 10);
+    assert_eq!(ids(&a), ["mood_drift_7d"]);
+    assert_eq!(state(&a, Indicator::Mood), IndicatorState::SelfCare);
+    assert_eq!(state(&a, Indicator::Stress), IndicatorState::Ok);
+}
+
+#[test]
+fn a_drift_for_14_days_must_stay_on_each_of_the_last_8_days() {
+    let set = rule_set();
+    for id in ["mood_drift_14d", "stress_drift_14d", "tiredness_drift_14d"] {
+        let rule = set.rules.iter().find(|r| r.id == id).unwrap();
+        assert_eq!((rule.sustain_days, rule.window_days), (Some(8), Some(7)));
+    }
+
+    let mut d = doc();
+    put(&mut d, -14..10, |_| {});
+    put(&mut d, 10..14, |a| a.mood = 0);
+    let a = at(&d, 13);
+    assert_eq!(indicator(&a, Indicator::Mood).drift_score, Some(-4.0));
+    assert_eq!(ids(&a), ["mood_drift_7d"]);
+    assert_eq!(a.level, Level::SelfCare);
+
+    put(&mut d, 0..14, |a| a.mood = 0);
+    assert_eq!(at(&d, 0).level, Level::Ok);
+    assert_eq!(ids(&at(&d, 1)), ["mood_drift_7d"]);
+    assert_eq!(ids(&at(&d, 7)), ["mood_drift_7d"]);
+    assert_eq!(ids(&at(&d, 8)), ["mood_drift_14d", "mood_drift_7d"]);
+
+    assert_eq!(ids(&at(&d, 13)), ["mood_drift_14d", "mood_drift_7d"]);
+    for n in 4..10 {
+        d.checks.remove(&day(n));
+    }
+    assert_eq!(ids(&at(&d, 13)), ["mood_drift_7d"]);
 }
 
 #[test]
@@ -267,6 +318,27 @@ fn validation_rejects_input_out_of_range_and_names_the_field() {
          answers.mood: must be 0 to 10; answers.fluid_l: must be 0 to 15; \
          answers.exercise_aerobic_min: must be 0 to 1440; symptoms[0].severity: must be 1 to 3"
     );
+    let mut zero = check(10);
+    zero.answers.as_mut().unwrap().sleep_end_min = 1380;
+    assert_eq!(
+        fields(validate::daily_check(&zero, today)),
+        ["answers.sleep_end_min"]
+    );
+    let mut two = check(10);
+    two.symptoms.push(rash(false, None));
+    two.symptoms.push(Symptom {
+        region: BodyRegion::Legs,
+        ..rash(false, None)
+    });
+    assert_eq!(validate::daily_check(&two, today), Ok(()));
+    let mut d = doc();
+    d.checks.insert(day(10), two);
+    let a = at(&d, 10);
+    for region in [BodyRegion::Arms, BodyRegion::Legs] {
+        let status = a.regions.iter().find(|r| r.region == region).unwrap();
+        assert_eq!(status.symptoms.len(), 1);
+    }
+
     let mut nan = check(10);
     nan.answers.as_mut().unwrap().fluid_l = f64::NAN;
     assert_eq!(
@@ -418,12 +490,19 @@ fn an_invalid_rule_file_gives_an_error_that_names_the_rule_id() {
         ("kind = \"absolute\"", "kind = \"relative\""),
         ("kind = \"absolute\"", "kind = \"red_flag\""),
         ("kind = \"absolute\"", "kind = \"vision\""),
+        ("kind = \"absolute\"", "kind = \"vision_change\""),
+        ("kind = \"absolute\"", "kind = \"symptom_not_improved\""),
         ("indicator = \"sleep_hours\"", "indicator = \"sleep\""),
         ("threshold = 6.0\n", ""),
         ("threshold = 6.0", "threshold = nan"),
         ("threshold = 6.0", "treshold = 6.0"),
         ("window_days = 7\n", ""),
         ("window_days = 7", "window_days = 0"),
+        ("window_days = 7", "window_days = 366"),
+        ("window_days = 7", "window_days = 7\nmin_days = 0"),
+        ("window_days = 7", "window_days = 7\nmin_days = 8"),
+        ("window_days = 7", "window_days = 7\nsustain_days = 8"),
+        ("threshold = 6.0", "threshold = inf"),
         ("level = \"self_care\"", "level = \"ok\""),
         ("level = \"self_care\"", "level = \"high\""),
     ] {
@@ -432,6 +511,31 @@ fn an_invalid_rule_file_gives_an_error_that_names_the_rule_id() {
         assert_eq!(error.rule_id.as_deref(), Some("x"), "{to}: {error}");
         assert!(error.to_string().starts_with("rule x: "), "{error}");
     }
+    let drift = RULE.replace("kind = \"absolute\"", "kind = \"drift\"");
+    let sustained = format!("{drift}sustain_days = 8\nmin_days = 4\n");
+    let rule = parse_one(&sustained).unwrap().rules.remove(0);
+    assert_eq!((rule.sustain_days, rule.min_days), (Some(8), Some(4)));
+    assert!(parse_one(&drift.replace("window_days = 7\n", "")).is_ok());
+    let acuity = RULE
+        .replace("sleep_hours", "acuity_left")
+        .replace("absolute", "vision_persistent");
+    assert!(parse_one(&acuity).is_ok());
+    let amsler = acuity
+        .replace("acuity_left", "amsler_left")
+        .replace("threshold = 6.0\n", "");
+    assert!(parse_one(&amsler).is_ok());
+    for body in [
+        drift.replace("window_days = 7", "window_days = 14"),
+        format!("{drift}min_days = 8\n"),
+        format!("{drift}sustain_days = 0\n"),
+        format!("{drift}sustain_days = 366\n"),
+        acuity.replace("threshold = 6.0\n", ""),
+        format!("{acuity}sustain_days = 2\n"),
+    ] {
+        let error = parse_one(&body).unwrap_err();
+        assert_eq!(error.rule_id.as_deref(), Some("x"), "{body}: {error}");
+    }
+
     let two = parse_one(&format!("{RULE}\n[[rules]]\n{RULE}")).unwrap_err();
     assert_eq!(two.rule_id.as_deref(), Some("x"));
 
@@ -477,23 +581,54 @@ fn a_symptom_for_more_than_7_consecutive_days_fires() {
     assert_eq!(at(&d, 8).level, Level::Ok);
 
     d.checks.remove(&day(3));
-    assert_eq!(at(&d, 7).level, Level::Ok);
+    assert_eq!(ids(&at(&d, 7)), ["symptom_recurrent_30_days"]);
+}
+
+#[test]
+fn a_headache_on_days_0_to_9_gives_tell_cmo_on_day_10_before_the_check() {
+    let mut d = doc();
+    for n in 0..10 {
+        let headache = Symptom {
+            kind: SymptomKind::Headache,
+            region: BodyRegion::Head,
+            ..rash(false, None)
+        };
+        log(&mut d, n, headache);
+    }
+    let a = at(&d, 10);
+    assert_eq!(a.level, Level::TellCmo);
+    assert_eq!(ids(&a), ["symptom_longer_than_7_days"]);
+    assert_eq!(
+        a.fired[0].subject,
+        RuleSubject::Symptom(SymptomKind::Headache)
+    );
+    assert_eq!(a.fired[0].value, Some(10.0));
+    assert_eq!(a.regions[0].level, Level::TellCmo);
+    assert_eq!(at(&d, 11).level, Level::Ok);
 }
 
 #[test]
 fn a_symptom_with_2_separate_episodes_in_30_days_fires() {
     let mut d = doc();
+    for n in (0..4).chain(5..9) {
+        log(&mut d, n, rash(false, None));
+    }
+    assert_eq!(at(&d, 4).level, Level::Ok);
+    for n in [5, 8] {
+        let a = at(&d, n);
+        assert_eq!(ids(&a), ["symptom_recurrent_30_days"]);
+        assert_eq!(a.fired[0].value, Some(2.0));
+        assert_eq!(a.fired[0].body_region, Some(BodyRegion::Arms));
+    }
+    assert_eq!(at(&d, 32).level, Level::TellCmo);
+    assert_eq!(at(&d, 33).level, Level::Ok);
+
+    let mut d = doc();
     log(&mut d, 0, rash(false, None));
-    log(&mut d, 2, rash(false, None));
-    assert_eq!(at(&d, 2).level, Level::Ok);
     d.checks.insert(day(1), check(1));
+    log(&mut d, 2, rash(false, None));
     assert_eq!(at(&d, 1).level, Level::Ok);
-    let a = at(&d, 2);
-    assert_eq!(ids(&a), ["symptom_recurrent_30_days"]);
-    assert_eq!(a.fired[0].value, Some(2.0));
-    assert_eq!(a.fired[0].body_region, Some(BodyRegion::Arms));
-    assert_eq!(at(&d, 29).level, Level::TellCmo);
-    assert_eq!(at(&d, 30).level, Level::Ok);
+    assert_eq!(ids(&at(&d, 2)), ["symptom_recurrent_30_days"]);
 }
 
 #[test]
@@ -517,9 +652,9 @@ fn a_symptom_that_is_treated_and_not_improved_fires() {
 }
 
 #[test]
-fn vision_rules_use_the_last_tests_and_the_baseline() {
+fn vision_rules_compare_the_last_tests_with_the_last_preflight_test() {
     let mut d = doc();
-    vision(&mut d, -14, eye(0.1, false));
+    vision(&mut d, -14, eye(0.0, false));
     vision(&mut d, -7, eye(0.1, false));
     vision(&mut d, 0, eye(0.3, false));
     let a = at(&d, 3);
@@ -536,7 +671,30 @@ fn vision_rules_use_the_last_tests_and_the_baseline() {
 
     vision(&mut d, 14, eye(0.2, false));
     assert_eq!(at(&d, 14).level, Level::Ok);
+}
 
+#[test]
+fn a_distortion_in_the_preflight_tests_is_not_a_new_finding() {
+    let mut d = doc();
+    vision(&mut d, -14, eye(0.0, true));
+    vision(&mut d, -7, eye(0.0, true));
+    for n in [-14, -7, -1] {
+        let a = at(&d, n);
+        assert_eq!(a.level, Level::Ok, "day {n}");
+        assert_eq!(
+            state(&a, Indicator::AmslerLeft),
+            IndicatorState::NotEnoughData
+        );
+    }
+    vision_2(&mut d, 0, eye(0.0, true), eye(0.0, false));
+    vision_2(&mut d, 7, eye(0.0, true), eye(0.0, true));
+    assert_eq!(at(&d, 0).level, Level::Ok);
+    assert_eq!(state(&at(&d, 0), Indicator::AmslerLeft), IndicatorState::Ok);
+    assert_eq!(ids(&at(&d, 7)), ["amsler_right_distortion"]);
+}
+
+#[test]
+fn a_distortion_with_no_preflight_test_fires() {
     let mut d = doc();
     vision(&mut d, 0, eye(0.9, true));
     let a = at(&d, 0);
@@ -546,6 +704,13 @@ fn vision_rules_use_the_last_tests_and_the_baseline() {
         IndicatorState::NotEnoughData
     );
     assert_eq!(state(&a, Indicator::AmslerRight), IndicatorState::Ok);
+    vision(&mut d, 7, eye(0.9, true));
+    let a = at(&d, 7);
+    assert_eq!(
+        ids(&a),
+        ["amsler_left_distortion_2_tests", "amsler_left_distortion"]
+    );
+    assert_eq!(a.level, Level::FlightSurgeon);
 }
 
 #[test]
@@ -638,27 +803,78 @@ fn a_series_has_one_point_for_each_day_from_the_first_stored_day() {
 }
 
 #[test]
-fn a_large_packet_is_16_kb_or_less() {
+fn a_packet_is_16_kb_or_less_for_all_input() {
+    let bad = eye(0.4, true);
     let mut d = doc();
-    put(&mut d, -14..14, |a| a.fluid_l = 1.0);
-    for n in 0..14 {
-        for _ in 0..60 {
-            log(&mut d, n, rash(true, Some(false)));
-        }
-        d.checks
-            .get_mut(&day(n))
-            .unwrap()
-            .red_flags
-            .push(RedFlagKind::Fever);
+    put(&mut d, -14..0, |_| {});
+    put(&mut d, 0..21, |a| {
+        a.sleep_end_min = 180;
+        a.mood = 0;
+        a.stress = 10;
+        a.tiredness = 10;
+        a.fluid_l = 1.0;
+        a.exercise_resistive_min = 0;
+        a.exercise_aerobic_min = 0;
+    });
+    for n in -14..21 {
+        let (mean_rt_ms, lapses) = if n < 0 { (250.0, 1) } else { (500.0, 20) };
+        let result = PvtResult {
+            date: day(n),
+            stimuli: 60,
+            mean_rt_ms: Some(mean_rt_ms),
+            lapses,
+            false_starts: 0,
+        };
+        d.pvt.insert(day(n), result);
     }
-    let p = packet::build(&d, &rule_set(), day(13));
+    vision(&mut d, -7, eye(0.0, false));
+    vision_2(&mut d, 7, bad.clone(), bad.clone());
+    vision_2(&mut d, 14, bad.clone(), bad);
+    for n in 0..21 {
+        for kind in SymptomKind::ALL.into_iter().filter(|_| n != 4) {
+            let symptom = Symptom {
+                kind,
+                region: BodyRegion::Head,
+                ..rash(true, Some(false))
+            };
+            log(&mut d, n, symptom);
+        }
+        d.checks.get_mut(&day(n)).unwrap().red_flags = RedFlagKind::ALL.to_vec();
+    }
+
+    let key = |f: &FiredRule| (f.rule_id.clone(), f.level, f.subject);
+    let a = at(&d, 20);
+    assert_eq!(a.fired.len(), 52);
+    let p = packet::build(&d, &rule_set(), day(20));
     let json = packet::to_json(&p);
     assert!(json.len() <= packet::MAX_BYTES, "{} bytes", json.len());
+    assert_eq!(serde_json::from_str::<Packet>(&json).unwrap(), p);
+    assert_eq!(
+        p.fired.iter().map(key).collect::<Vec<_>>(),
+        a.fired.iter().map(key).collect::<Vec<_>>()
+    );
     assert_eq!(p.level, Level::FlightSurgeon);
-    assert_eq!(p.fired[0].rule_id, "red_flag_fever");
-    assert_eq!(p.red_flags.len(), 14);
-    assert_eq!(p.flagged.len(), 1);
-    assert_eq!(p.flagged[0].values, vec![Some(1.0); 14]);
-    assert!(!p.symptoms.is_empty() && p.symptoms.len() < 840);
-    assert_eq!(p.symptoms.last().unwrap().date, day(13));
+    assert_eq!(p.red_flags.len(), 14 * 6);
+    assert_eq!(p.flagged.len(), 12);
+    assert_eq!(p.symptoms.len(), 8);
+    assert!(p.symptoms.iter().all(|s| s.date == day(20)));
+    println!(
+        "probe packet: {} bytes, values {}, baselines {}, sources {}",
+        json.len(),
+        p.flagged[0].values.len(),
+        p.baselines.len(),
+        p.fired.iter().filter(|f| !f.source.is_empty()).count()
+    );
+
+    let mut d = doc();
+    for n in 0..14 {
+        for _ in 0..400 {
+            log(&mut d, n, rash(true, Some(false)));
+        }
+    }
+    let p = packet::build(&d, &rule_set(), day(13));
+    assert!(packet::to_json(&p).len() <= packet::MAX_BYTES);
+    assert_eq!(p.fired.len(), 2);
+    assert!(!p.symptoms.is_empty() && p.symptoms.len() < 400);
+    assert!(p.symptoms.iter().all(|s| s.date == day(13)));
 }

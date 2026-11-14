@@ -13,17 +13,20 @@ use crate::model::{
 
 pub const ANY_SYMPTOM: &str = "any";
 pub const EPSILON: f64 = 1e-9;
+pub const MAX_WINDOW_DAYS: u32 = 365;
+pub const PERSISTENT_TESTS: usize = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RuleKind {
     Absolute,
     Drift,
-    Vision,
     SymptomDuration,
     SymptomRecurrence,
-    SymptomNotImproved,
+    SymptomUnresolved,
     RedFlag,
+    VisionChange,
+    VisionPersistent,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -41,6 +44,7 @@ pub struct Rule {
     pub threshold: Option<f64>,
     pub window_days: Option<u32>,
     pub min_days: Option<u32>,
+    pub sustain_days: Option<u32>,
     pub level: Level,
     pub action: String,
     pub explanation: String,
@@ -76,8 +80,12 @@ fn red_flag(name: &str) -> Option<RedFlagKind> {
     named(&RedFlagKind::ALL, name)
 }
 
-fn is_vision(indicator: Indicator) -> bool {
-    indicator.body_region() == BodyRegion::Eyes
+fn is_acuity(indicator: Indicator) -> bool {
+    matches!(indicator, Indicator::AcuityLeft | Indicator::AcuityRight)
+}
+
+fn is_amsler(indicator: Indicator) -> bool {
+    matches!(indicator, Indicator::AmslerLeft | Indicator::AmslerRight)
 }
 
 fn check(rule: &Rule) -> Result<(), String> {
@@ -96,8 +104,27 @@ fn check(rule: &Rule) -> Result<(), String> {
     if rule.threshold.is_some_and(|t| !t.is_finite()) {
         return Err("`threshold` must be a finite number".into());
     }
-    if rule.window_days == Some(0) {
-        return Err("`window_days` must be 1 or more".into());
+    for (name, days) in [
+        ("window_days", rule.window_days),
+        ("min_days", rule.min_days),
+        ("sustain_days", rule.sustain_days),
+    ] {
+        if days.is_some_and(|d| d == 0 || d > MAX_WINDOW_DAYS) {
+            return Err(format!("`{name}` must be 1 to {MAX_WINDOW_DAYS}"));
+        }
+    }
+    let drift = rule.kind == RuleKind::Drift;
+    if rule.sustain_days.is_some() && !drift {
+        return Err("`sustain_days` is only for the kind `drift`".into());
+    }
+    let window = rule.window_days.or(drift.then_some(MEAN_WINDOW_DAYS));
+    if drift && window != Some(MEAN_WINDOW_DAYS) {
+        return Err(format!(
+            "`window_days` must be {MEAN_WINDOW_DAYS} for the kind `drift`"
+        ));
+    }
+    if window.is_some_and(|w| rule.min_days.is_some_and(|m| m > w)) {
+        return Err("`min_days` must not be more than `window_days`".into());
     }
     let need = |present: bool, name: &str| {
         if present {
@@ -117,16 +144,18 @@ fn check(rule: &Rule) -> Result<(), String> {
             ind.is_some()
         }
         RuleKind::Drift => {
-            need(rule.window_days.is_some(), "window_days")?;
             need(
                 rule.threshold.is_some() || rule.level != Level::FlightSurgeon,
                 "threshold",
             )?;
             ind.is_some()
         }
-        RuleKind::Vision => {
-            need(rule.threshold.is_some(), "threshold")?;
-            ind.is_some_and(is_vision)
+        RuleKind::VisionChange | RuleKind::VisionPersistent => {
+            need(
+                rule.threshold.is_some() || !ind.is_some_and(is_acuity),
+                "threshold",
+            )?;
+            ind.is_some_and(|i| is_acuity(i) || is_amsler(i))
         }
         RuleKind::SymptomDuration => {
             need(rule.threshold.is_some(), "threshold")?;
@@ -137,7 +166,7 @@ fn check(rule: &Rule) -> Result<(), String> {
             need(rule.window_days.is_some(), "window_days")?;
             !symptom_kinds(&rule.indicator).is_empty()
         }
-        RuleKind::SymptomNotImproved => !symptom_kinds(&rule.indicator).is_empty(),
+        RuleKind::SymptomUnresolved => !symptom_kinds(&rule.indicator).is_empty(),
         RuleKind::RedFlag => {
             if rule.level != Level::FlightSurgeon {
                 return Err("a red flag rule must have the level `flight_surgeon`".into());
@@ -234,32 +263,53 @@ fn indicator_rule(
                 Level::TellCmo => set.drift.tell_cmo,
                 _ => set.drift.self_care,
             });
-            let score = drift_score(doc, indicator, date, rule.window_days?, min_days)?;
-            let bad = if low { -score } else { score };
-            Some((bad >= limit - EPSILON, score))
+            let score_on = |day| drift_score(doc, indicator, day, MEAN_WINDOW_DAYS, min_days);
+            let bad = |score: f64| (if low { -score } else { score }) >= limit - EPSILON;
+            let score = score_on(date)?;
+            let sustained = (1..rule.sustain_days.unwrap_or(1)).all(|back| {
+                date.checked_sub_days(Days::new(back.into()))
+                    .and_then(score_on)
+                    .is_some_and(bad)
+            });
+            Some((bad(score) && sustained, score))
         }
-        RuleKind::Vision => {
-            let limit = rule.threshold?;
-            let reference = match indicator {
-                Indicator::AmslerLeft | Indicator::AmslerRight => 0.0,
-                _ => baseline(doc, indicator)?.median,
-            };
-            let tests = min_days.max(1) as usize;
-            let last: Vec<f64> = doc
-                .vision
-                .range(..=date)
-                .rev()
-                .take(tests)
-                .filter_map(|(d, _)| value(doc, indicator, *d))
-                .collect();
-            if last.len() < tests {
-                return None;
-            }
-            let finding = last.iter().all(|v| v - reference >= limit - EPSILON);
-            Some((finding, last[0]))
-        }
+        RuleKind::VisionChange => vision_rule(doc, rule, indicator, date, 1),
+        RuleKind::VisionPersistent => vision_rule(doc, rule, indicator, date, PERSISTENT_TESTS),
         _ => None,
     }
+}
+
+fn vision_rule(
+    doc: &Document,
+    rule: &Rule,
+    indicator: Indicator,
+    date: NaiveDate,
+    tests: usize,
+) -> Option<(bool, f64)> {
+    let reference = doc
+        .vision
+        .range(..doc.settings.launch_date)
+        .next_back()
+        .map(|(day, _)| *day);
+    let last: Vec<f64> = doc
+        .vision
+        .range(..=date)
+        .rev()
+        .take(tests)
+        .filter(|(day, _)| reference.is_none_or(|reference| **day > reference))
+        .filter_map(|(day, _)| value(doc, indicator, *day))
+        .collect();
+    if last.len() < tests {
+        return None;
+    }
+    let before = reference.and_then(|day| value(doc, indicator, day));
+    let (before, limit) = if is_acuity(indicator) {
+        (before?, rule.threshold?)
+    } else {
+        (before.unwrap_or(0.0), 1.0)
+    };
+    let finding = last.iter().all(|now| now - before >= limit - EPSILON);
+    Some((finding, last[0]))
 }
 
 fn find(doc: &Document, date: NaiveDate, kind: SymptomKind) -> Option<&Symptom> {
@@ -297,8 +347,8 @@ fn symptom_rule(
             let mut episodes = 0.0;
             let mut present = false;
             let mut region = None;
-            for check in doc.checks.range(from..=date).map(|(_, c)| c) {
-                let symptom = check.symptoms.iter().find(|s| s.kind == kind);
+            for day in from.iter_days().take_while(|day| *day <= date) {
+                let symptom = find(doc, day, kind);
                 if symptom.is_some() && !present {
                     episodes += 1.0;
                 }
@@ -307,7 +357,7 @@ fn symptom_rule(
             }
             (episodes >= rule.threshold?).then_some((region?, Some(episodes)))
         }
-        RuleKind::SymptomNotImproved => doc
+        RuleKind::SymptomUnresolved => doc
             .checks
             .get(&date)?
             .symptoms
@@ -343,7 +393,10 @@ pub fn evaluate(doc: &Document, rules: &RuleSet, date: NaiveDate) -> Assessment 
 
     for rule in &rules.rules {
         match rule.kind {
-            RuleKind::Absolute | RuleKind::Drift | RuleKind::Vision => {
+            RuleKind::Absolute
+            | RuleKind::Drift
+            | RuleKind::VisionChange
+            | RuleKind::VisionPersistent => {
                 let Some(ind) = indicator(&rule.indicator) else {
                     continue;
                 };
@@ -367,7 +420,7 @@ pub fn evaluate(doc: &Document, rules: &RuleSet, date: NaiveDate) -> Assessment 
             }
             RuleKind::SymptomDuration
             | RuleKind::SymptomRecurrence
-            | RuleKind::SymptomNotImproved => {
+            | RuleKind::SymptomUnresolved => {
                 for kind in symptom_kinds(&rule.indicator) {
                     if let Some((region, value)) = symptom_rule(doc, rule, kind, date) {
                         fired.push(fire(rule, RuleSubject::Symptom(kind), Some(region), value));

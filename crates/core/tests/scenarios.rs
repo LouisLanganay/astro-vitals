@@ -76,7 +76,8 @@ fn each_rule_has_source_action_and_explanation() {
 fn the_rule_file_has_each_rule_of_the_spec_table() {
     use Level::{FlightSurgeon, SelfCare, TellCmo};
     use RuleKind::{
-        Absolute, Drift, RedFlag, SymptomDuration, SymptomNotImproved, SymptomRecurrence, Vision,
+        Absolute, Drift, RedFlag, SymptomDuration, SymptomRecurrence, SymptomUnresolved,
+        VisionChange, VisionPersistent,
     };
     let set = rule_set();
     let mut table = vec![
@@ -86,7 +87,7 @@ fn the_rule_file_has_each_rule_of_the_spec_table() {
         ("exercise_min", Absolute, SelfCare),
         (ANY_SYMPTOM, SymptomDuration, TellCmo),
         (ANY_SYMPTOM, SymptomRecurrence, TellCmo),
-        (ANY_SYMPTOM, SymptomNotImproved, TellCmo),
+        (ANY_SYMPTOM, SymptomUnresolved, TellCmo),
     ];
     for indicator in [
         "pvt_lapses",
@@ -99,8 +100,8 @@ fn the_rule_file_has_each_rule_of_the_spec_table() {
         table.push((indicator, Drift, TellCmo));
     }
     for indicator in ["amsler_left", "amsler_right", "acuity_left", "acuity_right"] {
-        table.push((indicator, Vision, TellCmo));
-        table.push((indicator, Vision, FlightSurgeon));
+        table.push((indicator, VisionChange, TellCmo));
+        table.push((indicator, VisionPersistent, FlightSurgeon));
     }
     let flags: Vec<String> = RedFlagKind::ALL
         .iter()
@@ -187,11 +188,7 @@ fn sleep_debt_decreases_sleep_from_day_40_and_starts_headaches_on_day_50() {
     assert_eq!(last.mission_day, MISSION_DAYS);
     assert_eq!(last.level, Level::TellCmo);
     let ids: Vec<&str> = last.fired.iter().map(|f| f.rule_id.as_str()).collect();
-    for id in [
-        "sleep_7d_below_6h",
-        "sleep_3d_below_5h",
-        "symptom_longer_than_7_days",
-    ] {
+    for id in ["sleep_7d_below_6h", "symptom_longer_than_7_days"] {
         assert!(ids.contains(&id), "{id} in {ids:?}");
     }
 }

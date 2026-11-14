@@ -76,6 +76,11 @@ pub fn daily_check(check: &DailyCheck, today: NaiveDate) -> Result<(), Validatio
                 format!("must be 0 to {}", MINUTES_PER_DAY - 1),
             );
         }
+        e.check(
+            a.sleep_start_min != a.sleep_end_min || a.sleep_end_min >= MINUTES_PER_DAY,
+            "answers.sleep_end_min",
+            "must not be equal to the sleep start",
+        );
         for (field, scale) in [
             ("answers.sleep_quality", a.sleep_quality),
             ("answers.mood", a.mood),
