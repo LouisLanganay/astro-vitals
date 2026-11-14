@@ -1,5 +1,6 @@
-# Rule set for crates/core. Format: .agents/CORE_API.md.
-# Drift levels 2 and 3 and the vision step 0.2 logMAR are design selections, not NASA limits.
+[drift]
+self_care = 2.0
+tell_cmo = 3.0
 
 [[rules]]
 id = "sleep_7d_below_6h"
@@ -27,36 +28,11 @@ explanation = "Your mean sleep for 3 days is below 5 hours. Sleep below 5 hours 
 body_region = "head"
 source = "https://doi.org/10.1093/sleep/zsac006"
 
-# Design selection: drift score 2 gives self_care, 3 gives tell_cmo.
 [[rules]]
-id = "pvt_mean_rt_drift_2"
-indicator = "pvt_mean_rt"
-kind = "drift"
-threshold = 2.0
-min_days = 3
-level = "self_care"
-action = "Check your sleep for the last nights. Take a break before a precise task."
-explanation = "Your mean reaction time is slower than your pre-flight baseline. Fatigue and sleep loss slow reaction time."
-body_region = "head"
-source = "https://doi.org/10.1093/sleep/zsac006"
-
-[[rules]]
-id = "pvt_mean_rt_drift_3"
-indicator = "pvt_mean_rt"
-kind = "drift"
-threshold = 3.0
-min_days = 3
-level = "tell_cmo"
-action = "Tell the Crew Medical Officer. Avoid critical tasks until you sleep more."
-explanation = "Your mean reaction time is much slower than your pre-flight baseline."
-body_region = "head"
-source = "https://doi.org/10.1093/sleep/zsac006"
-
-[[rules]]
-id = "pvt_lapses_drift_2"
+id = "pvt_lapses_drift_self_care"
 indicator = "pvt_lapses"
 kind = "drift"
-threshold = 2.0
+window_days = 7
 min_days = 3
 level = "self_care"
 action = "Check your sleep for the last nights. Take a break before a precise task."
@@ -65,10 +41,10 @@ body_region = "head"
 source = "https://doi.org/10.1093/sleep/zsac006"
 
 [[rules]]
-id = "pvt_lapses_drift_3"
+id = "pvt_lapses_drift_tell_cmo"
 indicator = "pvt_lapses"
 kind = "drift"
-threshold = 3.0
+window_days = 7
 min_days = 3
 level = "tell_cmo"
 action = "Tell the Crew Medical Officer. Avoid critical tasks until you sleep more."
@@ -77,10 +53,36 @@ body_region = "head"
 source = "https://doi.org/10.1093/sleep/zsac006"
 
 [[rules]]
+id = "pvt_mean_rt_drift_self_care"
+indicator = "pvt_mean_rt_ms"
+kind = "drift"
+window_days = 7
+min_days = 3
+level = "self_care"
+action = "Check your sleep for the last nights. Take a break before a precise task."
+explanation = "Your mean reaction time is slower than your pre-flight baseline. Fatigue and sleep loss slow reaction time."
+body_region = "head"
+source = "https://doi.org/10.1093/sleep/zsac006"
+
+[[rules]]
+id = "pvt_mean_rt_drift_tell_cmo"
+indicator = "pvt_mean_rt_ms"
+kind = "drift"
+window_days = 7
+min_days = 3
+level = "tell_cmo"
+action = "Tell the Crew Medical Officer. Avoid critical tasks until you sleep more."
+explanation = "Your mean reaction time is much slower than your pre-flight baseline."
+body_region = "head"
+source = "https://doi.org/10.1093/sleep/zsac006"
+
+[[rules]]
 id = "mood_drift_7d"
 indicator = "mood"
 kind = "drift"
 threshold = 2.0
+window_days = 7
+min_days = 4
 level = "self_care"
 action = "Plan a private call home, a crew activity, or time for your journal."
 explanation = "Your mood for 7 days is lower than your pre-flight baseline. Isolation can lower mood on long missions."
@@ -92,6 +94,8 @@ id = "stress_drift_7d"
 indicator = "stress"
 kind = "drift"
 threshold = 2.0
+window_days = 7
+min_days = 4
 level = "self_care"
 action = "Plan a rest period. Talk about the workload in the next crew debrief."
 explanation = "Your stress for 7 days is higher than your pre-flight baseline."
@@ -103,18 +107,21 @@ id = "tiredness_drift_7d"
 indicator = "tiredness"
 kind = "drift"
 threshold = 2.0
+window_days = 7
+min_days = 4
 level = "self_care"
 action = "Protect your next sleep period. Check your exercise and fluid intake."
 explanation = "Your tiredness for 7 days is higher than your pre-flight baseline."
 body_region = "head"
 source = "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093298"
 
-# Design selection: the 7-day mean stays at 2 or more for 8 days (14 days of data) gives tell_cmo.
 [[rules]]
 id = "mood_drift_14d"
 indicator = "mood"
 kind = "drift"
 threshold = 2.0
+window_days = 7
+min_days = 4
 sustain_days = 8
 level = "tell_cmo"
 action = "Tell the Crew Medical Officer. Ask for a private talk with the flight psychologist at the next conference."
@@ -127,6 +134,8 @@ id = "stress_drift_14d"
 indicator = "stress"
 kind = "drift"
 threshold = 2.0
+window_days = 7
+min_days = 4
 sustain_days = 8
 level = "tell_cmo"
 action = "Tell the Crew Medical Officer. Ask for a private talk with the flight psychologist at the next conference."
@@ -139,6 +148,8 @@ id = "tiredness_drift_14d"
 indicator = "tiredness"
 kind = "drift"
 threshold = 2.0
+window_days = 7
+min_days = 4
 sustain_days = 8
 level = "tell_cmo"
 action = "Tell the Crew Medical Officer."
@@ -159,7 +170,6 @@ explanation = "Your mean fluid intake for 3 days is below 2.5 L. In microgravity
 body_region = "abdomen"
 source = "https://www.nasa.gov/ochmo-mtb-003-urinary-health-2/"
 
-# No threshold: the core uses Settings::exercise_prescription_min (90 min by default).
 [[rules]]
 id = "exercise_7d_below_prescription"
 indicator = "exercise_min"
@@ -173,21 +183,20 @@ body_region = "legs"
 source = "https://www.nasa.gov/reference/risk-of-reduced-cardiorespiratory-and-musculoskeletal-fitness/"
 
 [[rules]]
-id = "symptom_over_7_days"
-indicator = "symptom"
+id = "symptom_longer_than_7_days"
+indicator = "any"
 kind = "symptom_duration"
-threshold = 7
+threshold = 7.0
 level = "tell_cmo"
 action = "Tell the Crew Medical Officer."
 explanation = "This symptom is present for more than 7 consecutive days. On the ISS, a symptom of more than 1 week is a notable event."
 source = "https://www.dovepress.com/incidence-of-clinical-symptoms-during-long-duration-orbital-spacefligh-peer-reviewed-article-IJGM"
 
-# Design selection: 2 episodes in 30 days.
 [[rules]]
-id = "symptom_recurrent_30d"
-indicator = "symptom"
+id = "symptom_recurrent_30_days"
+indicator = "any"
 kind = "symptom_recurrence"
-threshold = 2
+threshold = 2.0
 window_days = 30
 level = "tell_cmo"
 action = "Tell the Crew Medical Officer."
@@ -196,7 +205,7 @@ source = "https://www.dovepress.com/incidence-of-clinical-symptoms-during-long-d
 
 [[rules]]
 id = "symptom_treated_not_improved"
-indicator = "symptom"
+indicator = "any"
 kind = "symptom_unresolved"
 level = "tell_cmo"
 action = "Tell the Crew Medical Officer. Do not repeat the treatment without advice."
@@ -204,31 +213,145 @@ explanation = "You treated this symptom and it did not improve. No response to t
 source = "https://www.dovepress.com/incidence-of-clinical-symptoms-during-long-duration-orbital-spacefligh-peer-reviewed-article-IJGM"
 
 [[rules]]
-id = "vision_new_finding"
-indicator = "vision"
+id = "amsler_left_distortion"
+indicator = "amsler_left"
+kind = "vision_change"
+level = "tell_cmo"
+action = "Tell the Crew Medical Officer. Do the vision test again in 7 days."
+explanation = "The last Amsler grid test of the left eye shows a new distortion. Your last pre-flight test is the reference. Eye changes are frequent in long flights. This rule is a design selection."
+body_region = "eyes"
+source = "https://www.nasa.gov/reference/risk-of-spaceflight-associated-neuro-ocular-syndrome-sans/"
+
+[[rules]]
+id = "amsler_right_distortion"
+indicator = "amsler_right"
+kind = "vision_change"
+level = "tell_cmo"
+action = "Tell the Crew Medical Officer. Do the vision test again in 7 days."
+explanation = "The last Amsler grid test of the right eye shows a new distortion. Your last pre-flight test is the reference. Eye changes are frequent in long flights. This rule is a design selection."
+body_region = "eyes"
+source = "https://www.nasa.gov/reference/risk-of-spaceflight-associated-neuro-ocular-syndrome-sans/"
+
+[[rules]]
+id = "acuity_left_worse"
+indicator = "acuity_left"
 kind = "vision_change"
 threshold = 0.2
 level = "tell_cmo"
-action = "Tell the Crew Medical Officer. Do the test again next week in the same light."
-explanation = "Your near acuity is 0.2 logMAR worse than your pre-flight test, or the Amsler grid shows a new distortion. About 70% of ISS crew show some eye swelling (SANS)."
+action = "Tell the Crew Medical Officer. Do the vision test again in 7 days."
+explanation = "The last near acuity of the left eye is 0.2 logMAR or more worse than your last pre-flight test. This limit is a design selection."
+body_region = "eyes"
+source = "https://pmc.ncbi.nlm.nih.gov/articles/PMC7005826"
+
+[[rules]]
+id = "acuity_right_worse"
+indicator = "acuity_right"
+kind = "vision_change"
+threshold = 0.2
+level = "tell_cmo"
+action = "Tell the Crew Medical Officer. Do the vision test again in 7 days."
+explanation = "The last near acuity of the right eye is 0.2 logMAR or more worse than your last pre-flight test. This limit is a design selection."
+body_region = "eyes"
+source = "https://pmc.ncbi.nlm.nih.gov/articles/PMC7005826"
+
+[[rules]]
+id = "amsler_left_distortion_2_tests"
+indicator = "amsler_left"
+kind = "vision_persistent"
+level = "flight_surgeon"
+action = "Export the summary packet for the flight surgeon. Tell the Crew Medical Officer."
+explanation = "The last 2 Amsler grid tests of the left eye show a new distortion. This rule is a design selection."
+body_region = "eyes"
 source = "https://www.nasa.gov/reference/risk-of-spaceflight-associated-neuro-ocular-syndrome-sans/"
 
 [[rules]]
-id = "vision_finding_2_tests"
-indicator = "vision"
+id = "amsler_right_distortion_2_tests"
+indicator = "amsler_right"
+kind = "vision_persistent"
+level = "flight_surgeon"
+action = "Export the summary packet for the flight surgeon. Tell the Crew Medical Officer."
+explanation = "The last 2 Amsler grid tests of the right eye show a new distortion. This rule is a design selection."
+body_region = "eyes"
+source = "https://www.nasa.gov/reference/risk-of-spaceflight-associated-neuro-ocular-syndrome-sans/"
+
+[[rules]]
+id = "acuity_left_worse_2_tests"
+indicator = "acuity_left"
 kind = "vision_persistent"
 threshold = 0.2
 level = "flight_surgeon"
-action = "Export a packet for the flight surgeon."
-explanation = "The same vision finding is present in 2 tests in sequence."
-source = "https://www.nasa.gov/reference/risk-of-spaceflight-associated-neuro-ocular-syndrome-sans/"
+action = "Export the summary packet for the flight surgeon. Tell the Crew Medical Officer."
+explanation = "The near acuity of the left eye is 0.2 logMAR or more worse than your last pre-flight test in the last 2 tests. This limit is a design selection."
+body_region = "eyes"
+source = "https://pmc.ncbi.nlm.nih.gov/articles/PMC7005826"
 
-# TODO before submission: replace with the OCHMO VTE brief URL.
 [[rules]]
-id = "red_flag"
-indicator = "red_flag"
+id = "acuity_right_worse_2_tests"
+indicator = "acuity_right"
+kind = "vision_persistent"
+threshold = 0.2
+level = "flight_surgeon"
+action = "Export the summary packet for the flight surgeon. Tell the Crew Medical Officer."
+explanation = "The near acuity of the right eye is 0.2 logMAR or more worse than your last pre-flight test in the last 2 tests. This limit is a design selection."
+body_region = "eyes"
+source = "https://pmc.ncbi.nlm.nih.gov/articles/PMC7005826"
+
+[[rules]]
+id = "red_flag_chest_pain"
+indicator = "chest_pain"
 kind = "red_flag"
 level = "flight_surgeon"
-action = "Tell the Crew Medical Officer now. Export a packet for the flight surgeon."
-explanation = "You reported a red-flag symptom. This symptom can be a sign of a serious problem, for example a blood clot or a kidney stone."
+action = "Stop your task. Tell the Crew Medical Officer immediately. Export the summary packet for the flight surgeon."
+explanation = "Chest pain is a red flag. It needs a medical assessment immediately."
+body_region = "chest"
+source = "https://www.nasa.gov/wp-content/uploads/2023/07/ochmo-tb-033-spaceflight-experience-medical-care-rev-c.pdf"
+
+[[rules]]
+id = "red_flag_fainting"
+indicator = "fainting"
+kind = "red_flag"
+level = "flight_surgeon"
+action = "Stop your task. Tell the Crew Medical Officer immediately. Export the summary packet for the flight surgeon."
+explanation = "Fainting is a red flag. It needs a medical assessment immediately."
+body_region = "head"
+source = "https://www.nasa.gov/wp-content/uploads/2023/07/ochmo-tb-033-spaceflight-experience-medical-care-rev-c.pdf"
+
+[[rules]]
+id = "red_flag_sudden_vision_loss"
+indicator = "sudden_vision_loss"
+kind = "red_flag"
+level = "flight_surgeon"
+action = "Stop your task. Tell the Crew Medical Officer immediately. Export the summary packet for the flight surgeon."
+explanation = "Sudden vision loss is a red flag. It needs a medical assessment immediately."
+body_region = "eyes"
+source = "https://www.nasa.gov/reference/risk-of-spaceflight-associated-neuro-ocular-syndrome-sans/"
+
+[[rules]]
+id = "red_flag_fever"
+indicator = "fever"
+kind = "red_flag"
+level = "flight_surgeon"
+action = "Rest. Tell the Crew Medical Officer immediately. Export the summary packet for the flight surgeon."
+explanation = "Fever is a red flag. It needs a medical assessment immediately."
+body_region = "head"
+source = "https://www.nasa.gov/wp-content/uploads/2023/07/ochmo-tb-033-spaceflight-experience-medical-care-rev-c.pdf"
+
+[[rules]]
+id = "red_flag_blood_in_urine"
+indicator = "blood_in_urine"
+kind = "red_flag"
+level = "flight_surgeon"
+action = "Drink water. Tell the Crew Medical Officer immediately. Export the summary packet for the flight surgeon."
+explanation = "Blood in the urine is a red flag. A kidney stone is a possible cause. It needs a medical assessment immediately."
+body_region = "abdomen"
+source = "https://www.nasa.gov/ochmo-mtb-003-urinary-health-2/"
+
+[[rules]]
+id = "red_flag_one_sided_swelling"
+indicator = "one_sided_swelling"
+kind = "red_flag"
+level = "flight_surgeon"
+action = "Stop your task. Tell the Crew Medical Officer immediately. Export the summary packet for the flight surgeon."
+explanation = "Swelling on one side of the neck or face is a red flag. A blood clot in a neck vein is a possible cause. It needs a medical assessment immediately."
+body_region = "neck"
 source = "https://www.nasa.gov/wp-content/uploads/2023/07/ochmo-tb-033-spaceflight-experience-medical-care-rev-c.pdf"

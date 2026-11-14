@@ -1,10 +1,29 @@
+use std::collections::BTreeMap;
+use std::fmt;
+
+use chrono::{Days, NaiveDate};
 use serde::{Deserialize, Serialize};
 
-pub type MissionDay = i32;
-
+pub const DOCUMENT_VERSION: u32 = 1;
+pub const PACKET_VERSION: u32 = 1;
+pub const BASELINE_DAYS: u32 = 14;
+pub const MIN_PREFLIGHT_DAYS: u32 = 7;
+pub const MEAN_WINDOW_DAYS: u32 = 7;
+pub const VISION_INTERVAL_DAYS: u32 = 7;
+pub const DEFAULT_EXERCISE_MIN: u32 = 90;
 pub const MINUTES_PER_DAY: u16 = 1440;
+pub const SCALE_MAX: u8 = 10;
+pub const SEVERITY_MIN: u8 = 1;
+pub const SEVERITY_MAX: u8 = 3;
+pub const FLUID_MAX_L: f64 = 15.0;
+pub const CARD_WIDTH_MM: f64 = 85.6;
+pub const VIEWING_DISTANCE_CM: f64 = 40.0;
+pub const LOGMAR_STEP: f64 = 0.1;
+pub const ACUITY_TRIALS_PER_SIZE: u32 = 5;
+pub const ACUITY_MIN_CORRECT: u32 = 3;
+pub const AMSLER_GRID_SIZE: u8 = 20;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Level {
     Ok,
@@ -15,59 +34,38 @@ pub enum Level {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum SymptomKind {
-    Headache,
-    Congestion,
-    SkinRash,
-    BackPain,
-    Nausea,
-    Dizziness,
-    VisionChange,
-    Other,
-    ChestPain,
-    Fainting,
-    SuddenVisionLoss,
-    Fever,
-    BloodInUrine,
-    NeckFaceSwelling,
+pub enum IndicatorState {
+    NotEnoughData,
+    Ok,
+    SelfCare,
+    TellCmo,
+    FlightSurgeon,
 }
 
-static SYMPTOM_KINDS: [SymptomKind; 14] = [
-    SymptomKind::Headache,
-    SymptomKind::Congestion,
-    SymptomKind::SkinRash,
-    SymptomKind::BackPain,
-    SymptomKind::Nausea,
-    SymptomKind::Dizziness,
-    SymptomKind::VisionChange,
-    SymptomKind::Other,
-    SymptomKind::ChestPain,
-    SymptomKind::Fainting,
-    SymptomKind::SuddenVisionLoss,
-    SymptomKind::Fever,
-    SymptomKind::BloodInUrine,
-    SymptomKind::NeckFaceSwelling,
-];
-
-impl SymptomKind {
-    pub fn is_red_flag(self) -> bool {
-        matches!(
-            self,
-            Self::ChestPain
-                | Self::Fainting
-                | Self::SuddenVisionLoss
-                | Self::Fever
-                | Self::BloodInUrine
-                | Self::NeckFaceSwelling
-        )
-    }
-
-    pub fn all() -> &'static [SymptomKind] {
-        &SYMPTOM_KINDS
+impl From<Level> for IndicatorState {
+    fn from(level: Level) -> Self {
+        match level {
+            Level::Ok => Self::Ok,
+            Level::SelfCare => Self::SelfCare,
+            Level::TellCmo => Self::TellCmo,
+            Level::FlightSurgeon => Self::FlightSurgeon,
+        }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+impl IndicatorState {
+    pub fn level(self) -> Option<Level> {
+        match self {
+            Self::NotEnoughData => None,
+            Self::Ok => Some(Level::Ok),
+            Self::SelfCare => Some(Level::SelfCare),
+            Self::TellCmo => Some(Level::TellCmo),
+            Self::FlightSurgeon => Some(Level::FlightSurgeon),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BodyRegion {
     Head,
@@ -82,180 +80,77 @@ pub enum BodyRegion {
     Feet,
 }
 
-static BODY_REGIONS: [BodyRegion; 10] = [
-    BodyRegion::Head,
-    BodyRegion::Eyes,
-    BodyRegion::Neck,
-    BodyRegion::Chest,
-    BodyRegion::Abdomen,
-    BodyRegion::Back,
-    BodyRegion::Arms,
-    BodyRegion::Hands,
-    BodyRegion::Legs,
-    BodyRegion::Feet,
-];
-
 impl BodyRegion {
-    pub fn all() -> &'static [BodyRegion] {
-        &BODY_REGIONS
-    }
+    pub const ALL: [BodyRegion; 10] = [
+        Self::Head,
+        Self::Eyes,
+        Self::Neck,
+        Self::Chest,
+        Self::Abdomen,
+        Self::Back,
+        Self::Arms,
+        Self::Hands,
+        Self::Legs,
+        Self::Feet,
+    ];
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Symptom {
-    pub kind: SymptomKind,
-    pub severity: u8,
-    pub region: BodyRegion,
-    pub treated: bool,
-    pub improved: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DailyCheck {
-    pub day: MissionDay,
-    pub sleep_start_min: u16,
-    pub sleep_end_min: u16,
-    pub sleep_quality: u8,
-    pub sleep_aid: bool,
-    pub mood: u8,
-    pub stress: u8,
-    pub tiredness: u8,
-    pub workload: u8,
-    pub fluid_l: f64,
-    pub resistive_min: u16,
-    pub aerobic_min: u16,
-    #[serde(default)]
-    pub symptoms: Vec<Symptom>,
-}
-
-impl DailyCheck {
-    pub fn sleep_hours(&self) -> f64 {
-        let start = i32::from(self.sleep_start_min);
-        let end = i32::from(self.sleep_end_min);
-        let minutes = (end - start).rem_euclid(i32::from(MINUTES_PER_DAY));
-        f64::from(minutes) / 60.0
-    }
-
-    pub fn exercise_min(&self) -> f64 {
-        f64::from(self.resistive_min) + f64::from(self.aerobic_min)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PvtSubmission {
-    pub day: MissionDay,
-    pub reaction_times_ms: Vec<f64>,
-    pub early_inputs: u32,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PvtResult {
-    pub day: MissionDay,
-    pub trials: u32,
-    pub mean_rt_ms: f64,
-    pub lapses: u32,
-    pub false_starts: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum Eye {
-    Left,
-    Right,
+pub enum SymptomKind {
+    Headache,
+    Congestion,
+    SkinRash,
+    BackPain,
+    Nausea,
+    Dizziness,
+    VisionChange,
+    Other,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct EyeResult {
-    pub acuity_logmar: f64,
-    pub amsler_distortion: bool,
-    #[serde(default)]
-    pub amsler_cells: Vec<[u8; 2]>,
+impl SymptomKind {
+    pub const ALL: [SymptomKind; 8] = [
+        Self::Headache,
+        Self::Congestion,
+        Self::SkinRash,
+        Self::BackPain,
+        Self::Nausea,
+        Self::Dizziness,
+        Self::VisionChange,
+        Self::Other,
+    ];
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct VisionTest {
-    pub day: MissionDay,
-    pub left: EyeResult,
-    pub right: EyeResult,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RedFlagKind {
+    ChestPain,
+    Fainting,
+    SuddenVisionLoss,
+    Fever,
+    BloodInUrine,
+    OneSidedSwelling,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Settings {
-    pub launch_date: String,
-    pub exercise_prescription_min: f64,
+impl RedFlagKind {
+    pub const ALL: [RedFlagKind; 6] = [
+        Self::ChestPain,
+        Self::Fainting,
+        Self::SuddenVisionLoss,
+        Self::Fever,
+        Self::BloodInUrine,
+        Self::OneSidedSwelling,
+    ];
 }
 
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            launch_date: "2027-01-01".to_string(),
-            exercise_prescription_min: 90.0,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct MissionData {
-    #[serde(default)]
-    pub checks: Vec<DailyCheck>,
-    #[serde(default)]
-    pub pvt: Vec<PvtResult>,
-    #[serde(default)]
-    pub vision: Vec<VisionTest>,
-}
-
-impl MissionData {
-    pub fn upsert_check(&mut self, check: DailyCheck) {
-        match self.checks.iter().position(|c| c.day == check.day) {
-            Some(index) => self.checks[index] = check,
-            None => {
-                self.checks.push(check);
-                self.checks.sort_by_key(|c| c.day);
-            }
-        }
-    }
-
-    pub fn upsert_pvt(&mut self, result: PvtResult) {
-        match self.pvt.iter().position(|p| p.day == result.day) {
-            Some(index) => self.pvt[index] = result,
-            None => {
-                self.pvt.push(result);
-                self.pvt.sort_by_key(|p| p.day);
-            }
-        }
-    }
-
-    pub fn upsert_vision(&mut self, test: VisionTest) {
-        match self.vision.iter().position(|v| v.day == test.day) {
-            Some(index) => self.vision[index] = test,
-            None => {
-                self.vision.push(test);
-                self.vision.sort_by_key(|v| v.day);
-            }
-        }
-    }
-
-    pub fn check(&self, day: MissionDay) -> Option<&DailyCheck> {
-        self.checks.iter().find(|c| c.day == day)
-    }
-
-    pub fn pvt_result(&self, day: MissionDay) -> Option<&PvtResult> {
-        self.pvt.iter().find(|p| p.day == day)
-    }
-
-    pub fn vision_test(&self, day: MissionDay) -> Option<&VisionTest> {
-        self.vision.iter().find(|v| v.day == day)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Direction {
     Low,
     High,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Indicator {
     SleepHours,
@@ -266,34 +161,33 @@ pub enum Indicator {
     Workload,
     FluidL,
     ExerciseMin,
-    PvtMeanRt,
+    PvtMeanRtMs,
     PvtLapses,
-    Symptom,
-    RedFlag,
-    Vision,
+    PvtFalseStarts,
+    AcuityLeft,
+    AcuityRight,
+    AmslerLeft,
+    AmslerRight,
 }
 
-static NUMERIC_INDICATORS: [Indicator; 10] = [
-    Indicator::SleepHours,
-    Indicator::SleepQuality,
-    Indicator::Mood,
-    Indicator::Stress,
-    Indicator::Tiredness,
-    Indicator::Workload,
-    Indicator::FluidL,
-    Indicator::ExerciseMin,
-    Indicator::PvtMeanRt,
-    Indicator::PvtLapses,
-];
-
 impl Indicator {
-    pub fn numeric() -> &'static [Indicator] {
-        &NUMERIC_INDICATORS
-    }
-
-    pub fn is_numeric(self) -> bool {
-        !matches!(self, Self::Symptom | Self::RedFlag | Self::Vision)
-    }
+    pub const ALL: [Indicator; 15] = [
+        Self::SleepHours,
+        Self::SleepQuality,
+        Self::Mood,
+        Self::Stress,
+        Self::Tiredness,
+        Self::Workload,
+        Self::FluidL,
+        Self::ExerciseMin,
+        Self::PvtMeanRtMs,
+        Self::PvtLapses,
+        Self::PvtFalseStarts,
+        Self::AcuityLeft,
+        Self::AcuityRight,
+        Self::AmslerLeft,
+        Self::AmslerRight,
+    ];
 
     pub fn bad_direction(self) -> Direction {
         match self {
@@ -306,85 +200,223 @@ impl Indicator {
         }
     }
 
-    pub fn min_scale(self) -> f64 {
+    pub fn body_region(self) -> BodyRegion {
         match self {
-            Self::SleepHours => 0.25,
-            Self::SleepQuality | Self::Mood | Self::Stress | Self::Tiredness | Self::Workload => {
-                0.5
+            Self::FluidL => BodyRegion::Abdomen,
+            Self::ExerciseMin => BodyRegion::Legs,
+            Self::AcuityLeft | Self::AcuityRight | Self::AmslerLeft | Self::AmslerRight => {
+                BodyRegion::Eyes
             }
-            Self::FluidL => 0.1,
-            Self::ExerciseMin => 5.0,
-            Self::PvtMeanRt => 10.0,
-            Self::PvtLapses => 0.5,
-            Self::Symptom | Self::RedFlag | Self::Vision => 1.0,
+            _ => BodyRegion::Head,
         }
     }
 
-    pub fn value(self, data: &MissionData, day: MissionDay) -> Option<f64> {
+    pub fn unit(self) -> &'static str {
         match self {
-            Self::SleepHours => data.check(day).map(DailyCheck::sleep_hours),
-            Self::SleepQuality => data.check(day).map(|c| f64::from(c.sleep_quality)),
-            Self::Mood => data.check(day).map(|c| f64::from(c.mood)),
-            Self::Stress => data.check(day).map(|c| f64::from(c.stress)),
-            Self::Tiredness => data.check(day).map(|c| f64::from(c.tiredness)),
-            Self::Workload => data.check(day).map(|c| f64::from(c.workload)),
-            Self::FluidL => data.check(day).map(|c| c.fluid_l),
-            Self::ExerciseMin => data.check(day).map(DailyCheck::exercise_min),
-            Self::PvtMeanRt => {
-                let pvt = data.pvt_result(day)?;
-                Some(pvt.mean_rt_ms).filter(|v| *v > 0.0)
+            Self::SleepHours => "h",
+            Self::SleepQuality | Self::Mood | Self::Stress | Self::Tiredness | Self::Workload => {
+                "0-10"
             }
-            Self::PvtLapses => data.pvt_result(day).map(|p| f64::from(p.lapses)),
-            Self::Symptom | Self::RedFlag | Self::Vision => None,
+            Self::FluidL => "L",
+            Self::ExerciseMin => "min",
+            Self::PvtMeanRtMs => "ms",
+            Self::PvtLapses | Self::PvtFalseStarts => "count",
+            Self::AcuityLeft | Self::AcuityRight => "logMAR",
+            Self::AmslerLeft | Self::AmslerRight => "0-1",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Symptom {
+    pub kind: SymptomKind,
+    pub severity: u8,
+    pub region: BodyRegion,
+    pub treated: bool,
+    pub improved: Option<bool>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DailyAnswers {
+    pub sleep_start_min: u16,
+    pub sleep_end_min: u16,
+    pub sleep_quality: u8,
+    pub sleep_aid: bool,
+    pub mood: u8,
+    pub stress: u8,
+    pub tiredness: u8,
+    pub workload: u8,
+    pub fluid_l: f64,
+    pub exercise_resistive_min: u16,
+    pub exercise_aerobic_min: u16,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DailyCheck {
+    pub date: NaiveDate,
+    pub answers: Option<DailyAnswers>,
+    pub symptoms: Vec<Symptom>,
+    pub red_flags: Vec<RedFlagKind>,
+}
+
+impl DailyCheck {
+    pub fn empty(date: NaiveDate) -> Self {
+        Self {
+            date,
+            answers: None,
+            symptoms: Vec::new(),
+            red_flags: Vec::new(),
+        }
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.answers.is_some()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum PvtTrial {
+    Response { rt_ms: f64 },
+    Premature,
+    Timeout,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PvtInput {
+    pub date: NaiveDate,
+    pub trials: Vec<PvtTrial>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PvtResult {
+    pub date: NaiveDate,
+    pub stimuli: u32,
+    pub mean_rt_ms: Option<f64>,
+    pub lapses: u32,
+    pub false_starts: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Calibration {
+    pub px_per_mm: f64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AmslerCell {
+    pub row: u8,
+    pub col: u8,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EyeResult {
+    pub acuity_logmar: f64,
+    pub amsler_distortion: bool,
+    pub amsler_cells: Vec<AmslerCell>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VisionResult {
+    pub date: NaiveDate,
+    pub left: EyeResult,
+    pub right: EyeResult,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Settings {
+    pub launch_date: NaiveDate,
+    pub exercise_prescription_min: u32,
+    pub calibration: Option<Calibration>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Document {
+    pub version: u32,
+    pub settings: Settings,
+    pub checks: BTreeMap<NaiveDate, DailyCheck>,
+    pub pvt: BTreeMap<NaiveDate, PvtResult>,
+    pub vision: BTreeMap<NaiveDate, VisionResult>,
+}
+
+impl Document {
+    pub fn new(today: NaiveDate) -> Self {
+        Self {
+            version: DOCUMENT_VERSION,
+            settings: Settings {
+                launch_date: today + Days::new(BASELINE_DAYS as u64),
+                exercise_prescription_min: DEFAULT_EXERCISE_MIN,
+                calibration: None,
+            },
+            checks: BTreeMap::new(),
+            pvt: BTreeMap::new(),
+            vision: BTreeMap::new(),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum IndicatorState {
-    NotEnoughData,
-    Ok,
-    Flagged,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct IndicatorStatus {
-    pub indicator: Indicator,
-    pub state: IndicatorState,
-    pub level: Level,
-    pub baseline_median: Option<f64>,
-    pub baseline_mad: Option<f64>,
-    pub mean_7d: Option<f64>,
-    pub drift_score: Option<f64>,
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+pub enum RuleSubject {
+    Indicator(Indicator),
+    Symptom(SymptomKind),
+    RedFlag(RedFlagKind),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FiredRule {
     pub rule_id: String,
-    pub indicator: Indicator,
     pub level: Level,
     pub action: String,
     pub explanation: String,
-    pub source: String,
     pub body_region: Option<BodyRegion>,
-    pub symptom: Option<SymptomKind>,
+    pub source: String,
+    pub subject: RuleSubject,
     pub value: Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Baseline {
+    pub median: f64,
+    pub mad: f64,
+    pub days: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IndicatorStatus {
+    pub indicator: Indicator,
+    pub region: BodyRegion,
+    pub state: IndicatorState,
+    pub value: Option<f64>,
+    pub mean_7d: Option<f64>,
+    pub baseline: Option<Baseline>,
+    pub drift_score: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RegionStatus {
+    pub region: BodyRegion,
+    pub level: Level,
+    pub symptoms: Vec<Symptom>,
+    pub indicators: Vec<IndicatorStatus>,
+    pub fired: Vec<FiredRule>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Assessment {
-    pub day: MissionDay,
+    pub date: NaiveDate,
+    pub mission_day: i32,
     pub level: Level,
     pub fired: Vec<FiredRule>,
     pub indicators: Vec<IndicatorStatus>,
-    pub drift_enabled: bool,
+    pub regions: Vec<RegionStatus>,
     pub preflight_days: u32,
+    pub drift_enabled: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SeriesPoint {
-    pub day: MissionDay,
+    pub date: NaiveDate,
+    pub mission_day: i32,
     pub value: Option<f64>,
     pub mean_7d: Option<f64>,
 }
@@ -392,95 +424,302 @@ pub struct SeriesPoint {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Series {
     pub indicator: Indicator,
+    pub baseline: Option<Baseline>,
     pub points: Vec<SeriesPoint>,
-    pub baseline_median: Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskKind {
+    DailyCheck,
+    Pvt,
+    VisionTest,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DueTask {
+    pub kind: TaskKind,
+    pub optional: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Notice {
+    DataFileCorrupt { backup_path: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MissionStatus {
+    pub today: NaiveDate,
+    pub mission_day: i32,
+    pub due: Vec<DueTask>,
+    pub streak: u32,
+    pub notices: Vec<Notice>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DayView {
+    pub date: NaiveDate,
+    pub mission_day: i32,
+    pub check: DailyCheck,
+    pub pvt: Option<PvtResult>,
+    pub vision: Option<VisionResult>,
+    pub mission: MissionStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PacketIndicator {
+    pub indicator: Indicator,
+    pub values: Vec<Option<f64>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IndicatorBaseline {
+    pub indicator: Indicator,
+    pub baseline: Baseline,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DatedSymptom {
+    pub date: NaiveDate,
+    pub symptom: Symptom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DatedRedFlag {
+    pub date: NaiveDate,
+    pub kind: RedFlagKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Packet {
+    pub version: u32,
+    pub date: NaiveDate,
+    pub mission_day: i32,
+    pub level: Level,
+    pub fired: Vec<FiredRule>,
+    pub flagged: Vec<PacketIndicator>,
+    pub symptoms: Vec<DatedSymptom>,
+    pub red_flags: Vec<DatedRedFlag>,
+    pub baselines: Vec<IndicatorBaseline>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PacketExport {
+    pub packet: Packet,
+    pub json: String,
+    pub bytes: u32,
+    pub path: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ScenarioId {
+    Healthy,
+    SleepDebt,
+    Vision,
+}
+
+impl ScenarioId {
+    pub const ALL: [ScenarioId; 3] = [Self::Healthy, Self::SleepDebt, Self::Vision];
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExpectedLevel {
+    pub level: Level,
+    pub first_mission_day: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScenarioInfo {
+    pub id: ScenarioId,
+    pub description: String,
+    pub mission_day: i32,
+    pub expected: Vec<ExpectedLevel>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FieldError {
+    pub field: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ValidationError {
+    pub errors: Vec<FieldError>,
+}
+
+impl fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, e) in self.errors.iter().enumerate() {
+            if i > 0 {
+                write!(f, "; ")?;
+            }
+            write!(f, "{}: {}", e.field, e.message)?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for ValidationError {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RulesError {
+    pub rule_id: Option<String>,
+    pub message: String,
+}
+
+impl fmt::Display for RulesError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.rule_id {
+            Some(id) => write!(f, "rule {id}: {}", self.message),
+            None => write!(f, "rules: {}", self.message),
+        }
+    }
+}
+
+impl std::error::Error for RulesError {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum AppError {
+    Validation {
+        errors: Vec<FieldError>,
+    },
+    Rules {
+        rule_id: Option<String>,
+        message: String,
+    },
+    Storage {
+        message: String,
+    },
+    Internal {
+        message: String,
+    },
+}
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Validation { errors } => ValidationError {
+                errors: errors.clone(),
+            }
+            .fmt(f),
+            Self::Rules { rule_id, message } => RulesError {
+                rule_id: rule_id.clone(),
+                message: message.clone(),
+            }
+            .fmt(f),
+            Self::Storage { message } => write!(f, "storage: {message}"),
+            Self::Internal { message } => write!(f, "internal: {message}"),
+        }
+    }
+}
+
+impl std::error::Error for AppError {}
+
+impl From<ValidationError> for AppError {
+    fn from(e: ValidationError) -> Self {
+        Self::Validation { errors: e.errors }
+    }
+}
+
+impl From<RulesError> for AppError {
+    fn from(e: RulesError) -> Self {
+        Self::Rules {
+            rule_id: e.rule_id,
+            message: e.message,
+        }
+    }
+}
+
+impl From<std::io::Error> for AppError {
+    fn from(e: std::io::Error) -> Self {
+        Self::Storage {
+            message: e.to_string(),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
-    fn check(day: MissionDay, start: u16, end: u16) -> DailyCheck {
-        DailyCheck {
-            day,
-            sleep_start_min: start,
-            sleep_end_min: end,
-            sleep_quality: 7,
-            sleep_aid: false,
-            mood: 7,
-            stress: 3,
-            tiredness: 3,
-            workload: 5,
-            fluid_l: 2.5,
-            resistive_min: 40,
-            aerobic_min: 50,
-            symptoms: Vec::new(),
-        }
-    }
-
-    fn close(a: f64, b: f64) -> bool {
-        (a - b).abs() < 1e-9
+    fn date(s: &str) -> NaiveDate {
+        s.parse().unwrap()
     }
 
     #[test]
-    fn sleep_through_midnight() {
-        assert!(close(check(0, 1380, 420).sleep_hours(), 8.0));
-        assert!(close(check(0, 1410, 0).sleep_hours(), 0.5));
-    }
-
-    #[test]
-    fn sleep_on_same_side_of_midnight() {
-        assert!(close(check(0, 60, 450).sleep_hours(), 6.5));
-        assert!(close(check(0, 300, 300).sleep_hours(), 0.0));
-    }
-
-    #[test]
-    fn upsert_replaces_same_day() {
-        let mut data = MissionData::default();
-        data.upsert_check(check(2, 1380, 420));
-        data.upsert_check(check(0, 1380, 420));
-        data.upsert_check(check(2, 1380, 300));
-        assert_eq!(data.checks.len(), 2);
-        assert_eq!(data.checks[0].day, 0);
-        assert_eq!(data.check(2).map(|c| c.sleep_end_min), Some(300));
-    }
-
-    #[test]
-    fn indicator_values() {
-        let mut data = MissionData::default();
-        data.upsert_check(check(1, 1380, 420));
-        data.upsert_pvt(PvtResult {
-            day: 1,
-            trials: 40,
-            mean_rt_ms: 280.0,
-            lapses: 2,
-            false_starts: 1,
-        });
-        assert_eq!(Indicator::ExerciseMin.value(&data, 1), Some(90.0));
-        assert_eq!(Indicator::PvtLapses.value(&data, 1), Some(2.0));
-        assert_eq!(Indicator::PvtMeanRt.value(&data, 1), Some(280.0));
-        assert_eq!(Indicator::Mood.value(&data, 2), None);
-        assert_eq!(Indicator::Symptom.value(&data, 1), None);
-    }
-
-    #[test]
-    fn red_flags_and_lists() {
-        let red: Vec<SymptomKind> = SymptomKind::all()
-            .iter()
-            .copied()
-            .filter(|k| k.is_red_flag())
-            .collect();
-        assert_eq!(red.len(), 6);
-        assert!(!SymptomKind::Headache.is_red_flag());
-        assert_eq!(BodyRegion::all().len(), 10);
-        assert_eq!(Indicator::numeric().len(), 10);
-        assert!(Indicator::numeric().iter().all(|i| i.is_numeric()));
-    }
-
-    #[test]
-    fn level_order() {
+    fn levels_are_in_order() {
         assert!(Level::Ok < Level::SelfCare);
         assert!(Level::SelfCare < Level::TellCmo);
         assert!(Level::TellCmo < Level::FlightSurgeon);
+    }
+
+    #[test]
+    fn wire_names_are_snake_case() {
+        assert_eq!(json!(Level::FlightSurgeon), json!("flight_surgeon"));
+        assert_eq!(
+            json!(IndicatorState::NotEnoughData),
+            json!("not_enough_data")
+        );
+        assert_eq!(json!(Indicator::PvtMeanRtMs), json!("pvt_mean_rt_ms"));
+        assert_eq!(json!(ScenarioId::SleepDebt), json!("sleep_debt"));
+        assert_eq!(
+            json!(PvtTrial::Response { rt_ms: 250.0 }),
+            json!({"kind": "response", "rt_ms": 250.0})
+        );
+        assert_eq!(json!(PvtTrial::Timeout), json!({"kind": "timeout"}));
+        assert_eq!(
+            json!(RuleSubject::Symptom(SymptomKind::SkinRash)),
+            json!({"type": "symptom", "value": "skin_rash"})
+        );
+        assert_eq!(
+            json!(AppError::Validation {
+                errors: vec![FieldError {
+                    field: "answers.mood".into(),
+                    message: "must be 0 to 10".into()
+                }]
+            }),
+            json!({"kind": "validation", "errors": [{"field": "answers.mood", "message": "must be 0 to 10"}]})
+        );
+        assert_eq!(
+            json!(Notice::DataFileCorrupt {
+                backup_path: "x".into()
+            }),
+            json!({"kind": "data_file_corrupt", "backup_path": "x"})
+        );
+    }
+
+    #[test]
+    fn document_round_trip_keeps_date_keys() {
+        let today = date("2026-11-14");
+        let mut doc = Document::new(today);
+        assert_eq!(doc.settings.launch_date, date("2026-11-28"));
+        let mut check = DailyCheck::empty(today);
+        check.symptoms.push(Symptom {
+            kind: SymptomKind::Headache,
+            severity: 2,
+            region: BodyRegion::Head,
+            treated: true,
+            improved: Some(false),
+        });
+        assert!(!check.is_complete());
+        doc.checks.insert(today, check);
+        let text = serde_json::to_string(&doc).unwrap();
+        assert!(text.contains("\"2026-11-14\":{"));
+        let back: Document = serde_json::from_str(&text).unwrap();
+        assert_eq!(back, doc);
+    }
+
+    #[test]
+    fn each_indicator_has_static_data() {
+        for i in Indicator::ALL {
+            assert!(!i.unit().is_empty());
+            let _ = (i.bad_direction(), i.body_region());
+        }
+        assert_eq!(Indicator::SleepHours.bad_direction(), Direction::Low);
+        assert_eq!(Indicator::AmslerLeft.body_region(), BodyRegion::Eyes);
     }
 }

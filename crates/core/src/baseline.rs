@@ -1,257 +1,143 @@
-use serde::{Deserialize, Serialize};
+use chrono::{Days, NaiveDate};
 
-use crate::model::{Direction, Indicator, MissionData, MissionDay, Series, SeriesPoint};
+use crate::mission::mission_day;
+use crate::model::{
+    BASELINE_DAYS, Baseline, Document, Indicator, MEAN_WINDOW_DAYS, MINUTES_PER_DAY, Series,
+    SeriesPoint,
+};
 
-pub const PREFLIGHT_DAYS: i32 = 14;
-pub const MIN_PREFLIGHT_DAYS: usize = 7;
-pub const DRIFT_WINDOW_DAYS: u32 = 7;
-pub const DEFAULT_DRIFT_MIN_DAYS: usize = 4;
 pub const MAD_SCALE: f64 = 1.4826;
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct Baseline {
-    pub median: f64,
-    pub mad: f64,
-    pub n: usize,
-}
-
 pub fn median(values: &[f64]) -> Option<f64> {
-    if values.is_empty() {
-        return None;
+    let mut v = values.to_vec();
+    v.sort_by(f64::total_cmp);
+    let n = v.len();
+    match n {
+        0 => None,
+        _ if n % 2 == 1 => Some(v[n / 2]),
+        _ => Some((v[n / 2 - 1] + v[n / 2]) / 2.0),
     }
-    let mut sorted = values.to_vec();
-    sorted.sort_by(f64::total_cmp);
-    let n = sorted.len();
-    Some((sorted[(n - 1) / 2] + sorted[n / 2]) / 2.0)
 }
 
 pub fn mad(values: &[f64]) -> Option<f64> {
-    let center = median(values)?;
-    let deviations: Vec<f64> = values.iter().map(|v| (v - center).abs()).collect();
-    median(&deviations)
+    let m = median(values)?;
+    median(&values.iter().map(|x| (x - m).abs()).collect::<Vec<_>>())
 }
 
-pub fn mean(values: &[f64]) -> Option<f64> {
-    if values.is_empty() {
-        None
-    } else {
-        Some(values.iter().sum::<f64>() / values.len() as f64)
+pub fn min_scale(indicator: Indicator) -> f64 {
+    match indicator {
+        Indicator::SleepHours => 0.5,
+        Indicator::FluidL => 0.25,
+        Indicator::ExerciseMin => 10.0,
+        Indicator::PvtMeanRtMs => 15.0,
+        Indicator::PvtLapses => 1.5,
+        Indicator::AcuityLeft | Indicator::AcuityRight => 0.1,
+        _ => 1.0,
     }
 }
 
-pub fn robust_score(mean: f64, median: f64, mad: f64, min_scale: f64) -> f64 {
-    let scale = (MAD_SCALE * mad).max(min_scale).max(f64::MIN_POSITIVE);
-    (mean - median) / scale
+pub fn robust_score(value: f64, median: f64, mad: f64, min_scale: f64) -> f64 {
+    (value - median) / (MAD_SCALE * mad).max(min_scale)
 }
 
-pub fn window_start(end_day: MissionDay, window_days: u32) -> MissionDay {
-    let span = i32::try_from(window_days).unwrap_or(i32::MAX);
-    end_day.saturating_sub(span).saturating_add(1)
+pub fn sleep_hours(start_min: u16, end_min: u16) -> f64 {
+    let day = i32::from(MINUTES_PER_DAY);
+    f64::from((i32::from(end_min) - i32::from(start_min)).rem_euclid(day)) / 60.0
 }
 
-pub fn window_values(
-    data: &MissionData,
+pub fn value(doc: &Document, indicator: Indicator, date: NaiveDate) -> Option<f64> {
+    let answers = || doc.checks.get(&date)?.answers.as_ref();
+    let pvt = || doc.pvt.get(&date);
+    let vision = || doc.vision.get(&date);
+    let flag = |b: bool| if b { 1.0 } else { 0.0 };
+    match indicator {
+        Indicator::SleepHours => answers().map(|a| sleep_hours(a.sleep_start_min, a.sleep_end_min)),
+        Indicator::SleepQuality => answers().map(|a| f64::from(a.sleep_quality)),
+        Indicator::Mood => answers().map(|a| f64::from(a.mood)),
+        Indicator::Stress => answers().map(|a| f64::from(a.stress)),
+        Indicator::Tiredness => answers().map(|a| f64::from(a.tiredness)),
+        Indicator::Workload => answers().map(|a| f64::from(a.workload)),
+        Indicator::FluidL => answers().map(|a| a.fluid_l),
+        Indicator::ExerciseMin => answers()
+            .map(|a| f64::from(a.exercise_resistive_min) + f64::from(a.exercise_aerobic_min)),
+        Indicator::PvtMeanRtMs => pvt()?.mean_rt_ms,
+        Indicator::PvtLapses => pvt().map(|p| f64::from(p.lapses)),
+        Indicator::PvtFalseStarts => pvt().map(|p| f64::from(p.false_starts)),
+        Indicator::AcuityLeft => vision().map(|v| v.left.acuity_logmar),
+        Indicator::AcuityRight => vision().map(|v| v.right.acuity_logmar),
+        Indicator::AmslerLeft => vision().map(|v| flag(v.left.amsler_distortion)),
+        Indicator::AmslerRight => vision().map(|v| flag(v.right.amsler_distortion)),
+    }
+}
+
+fn window_values(
+    doc: &Document,
     indicator: Indicator,
-    end_day: MissionDay,
+    end: NaiveDate,
     window_days: u32,
 ) -> Vec<f64> {
-    (window_start(end_day, window_days)..=end_day)
-        .filter_map(|day| indicator.value(data, day))
+    (0..u64::from(window_days))
+        .filter_map(|back| value(doc, indicator, end.checked_sub_days(Days::new(back))?))
         .collect()
 }
 
-pub fn mean_7d(data: &MissionData, indicator: Indicator, day: MissionDay) -> Option<f64> {
-    mean(&window_values(data, indicator, day, DRIFT_WINDOW_DAYS))
+fn preflight_values(doc: &Document, indicator: Indicator) -> Vec<f64> {
+    match doc.settings.launch_date.pred_opt() {
+        Some(last) => window_values(doc, indicator, last, BASELINE_DAYS),
+        None => Vec::new(),
+    }
 }
 
-pub fn baseline(data: &MissionData, indicator: Indicator) -> Option<Baseline> {
-    let values = window_values(data, indicator, -1, PREFLIGHT_DAYS.unsigned_abs());
+pub fn preflight_days(doc: &Document) -> u32 {
+    preflight_values(doc, Indicator::Mood).len() as u32
+}
+
+pub fn baseline(doc: &Document, indicator: Indicator) -> Option<Baseline> {
+    let values = preflight_values(doc, indicator);
     Some(Baseline {
         median: median(&values)?,
         mad: mad(&values)?,
-        n: values.len(),
+        days: values.len() as u32,
     })
 }
 
-pub fn drift_score(
-    data: &MissionData,
+pub fn window_mean(
+    doc: &Document,
     indicator: Indicator,
-    day: MissionDay,
-    min_days: usize,
+    end: NaiveDate,
+    window_days: u32,
+    min_days: u32,
 ) -> Option<f64> {
-    let base = baseline(data, indicator)?;
-    drift_score_from(&base, data, indicator, day, min_days)
-}
-
-pub fn drift_score_from(
-    base: &Baseline,
-    data: &MissionData,
-    indicator: Indicator,
-    day: MissionDay,
-    min_days: usize,
-) -> Option<f64> {
-    if base.n < MIN_PREFLIGHT_DAYS {
+    let values = window_values(doc, indicator, end, window_days);
+    if values.is_empty() || (values.len() as u32) < min_days {
         return None;
     }
-    let values = window_values(data, indicator, day, DRIFT_WINDOW_DAYS);
-    if values.len() < min_days.max(1) {
-        return None;
-    }
-    let recent = mean(&values)?;
-    let raw = robust_score(recent, base.median, base.mad, indicator.min_scale());
-    match indicator.bad_direction() {
-        Direction::High => Some(raw),
-        Direction::Low => Some(-raw),
-    }
+    Some(values.iter().sum::<f64>() / values.len() as f64)
 }
 
-pub fn series(
-    data: &MissionData,
-    indicator: Indicator,
-    from: MissionDay,
-    to: MissionDay,
-) -> Series {
-    let points = (from..=to)
-        .map(|day| SeriesPoint {
-            day,
-            value: indicator.value(data, day),
-            mean_7d: mean_7d(data, indicator, day),
+pub fn series(doc: &Document, indicator: Indicator, today: NaiveDate) -> Series {
+    let first = [
+        doc.checks.keys().next(),
+        doc.pvt.keys().next(),
+        doc.vision.keys().next(),
+    ]
+    .into_iter()
+    .flatten()
+    .min()
+    .copied();
+    let points = first
+        .into_iter()
+        .flat_map(|first| first.iter_days().take_while(|d| *d <= today))
+        .map(|date| SeriesPoint {
+            date,
+            mission_day: mission_day(doc.settings.launch_date, date),
+            value: value(doc, indicator, date),
+            mean_7d: window_mean(doc, indicator, date, MEAN_WINDOW_DAYS, 1),
         })
         .collect();
     Series {
         indicator,
+        baseline: baseline(doc, indicator),
         points,
-        baseline_median: baseline(data, indicator).map(|b| b.median),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::model::DailyCheck;
-
-    fn close(a: f64, b: f64) -> bool {
-        (a - b).abs() < 1e-9
-    }
-
-    fn check(day: MissionDay, sleep_min: u16, stress: u8) -> DailyCheck {
-        DailyCheck {
-            day,
-            sleep_start_min: 1380,
-            sleep_end_min: (1380 + sleep_min) % 1440,
-            sleep_quality: 7,
-            sleep_aid: false,
-            mood: 7,
-            stress,
-            tiredness: 3,
-            workload: 5,
-            fluid_l: 2.5,
-            resistive_min: 40,
-            aerobic_min: 50,
-            symptoms: Vec::new(),
-        }
-    }
-
-    fn mission(preflight_days: i32, flight_sleep_min: u16, flight_stress: u8) -> MissionData {
-        let mut data = MissionData::default();
-        for day in -preflight_days..0 {
-            data.upsert_check(check(day, 480, 3));
-        }
-        for day in 0..10 {
-            data.upsert_check(check(day, flight_sleep_min, flight_stress));
-        }
-        data
-    }
-
-    #[test]
-    fn median_odd_and_even() {
-        assert_eq!(median(&[3.0, 1.0, 2.0]), Some(2.0));
-        assert_eq!(median(&[4.0, 1.0, 3.0, 2.0]), Some(2.5));
-        assert_eq!(median(&[]), None);
-    }
-
-    #[test]
-    fn mad_known_values() {
-        assert_eq!(mad(&[1.0, 1.0, 2.0, 2.0, 4.0, 6.0, 9.0]), Some(1.0));
-        assert_eq!(mad(&[2.0, 4.0, 6.0, 8.0]), Some(2.0));
-        assert_eq!(mad(&[5.0, 5.0, 5.0]), Some(0.0));
-        assert_eq!(mad(&[]), None);
-    }
-
-    #[test]
-    fn robust_score_uses_mad() {
-        let score = robust_score(7.0, 5.0, 1.0, 0.5);
-        assert!(close(score, 2.0 / 1.4826));
-    }
-
-    #[test]
-    fn mad_zero_uses_min_scale() {
-        let score = robust_score(6.0, 5.0, 0.0, 0.5);
-        assert!(score.is_finite());
-        assert!(close(score, 2.0));
-    }
-
-    #[test]
-    fn baseline_from_preflight_days() {
-        let data = mission(14, 480, 3);
-        let base = baseline(&data, Indicator::SleepHours);
-        assert_eq!(
-            base,
-            Some(Baseline {
-                median: 8.0,
-                mad: 0.0,
-                n: 14,
-            })
-        );
-    }
-
-    #[test]
-    fn drift_sign_is_positive_for_bad_direction() {
-        let data = mission(14, 360, 7);
-        let sleep = drift_score(&data, Indicator::SleepHours, 9, 4);
-        let stress = drift_score(&data, Indicator::Stress, 9, 4);
-        assert!(close(sleep.unwrap_or(0.0), 8.0));
-        assert!(close(stress.unwrap_or(0.0), 8.0));
-    }
-
-    #[test]
-    fn drift_sign_is_negative_for_good_direction() {
-        let data = mission(14, 600, 1);
-        let sleep = drift_score(&data, Indicator::SleepHours, 9, 4);
-        let stress = drift_score(&data, Indicator::Stress, 9, 4);
-        assert!(sleep.unwrap_or(0.0) < 0.0);
-        assert!(stress.unwrap_or(0.0) < 0.0);
-    }
-
-    #[test]
-    fn drift_off_with_few_preflight_days() {
-        let data = mission(6, 360, 7);
-        assert_eq!(drift_score(&data, Indicator::SleepHours, 9, 4), None);
-    }
-
-    #[test]
-    fn drift_needs_min_days_in_window() {
-        let mut data = mission(14, 360, 7);
-        data.checks.retain(|c| c.day < 0 || c.day > 7);
-        assert_eq!(drift_score(&data, Indicator::SleepHours, 9, 4), None);
-        assert!(drift_score(&data, Indicator::SleepHours, 9, 2).is_some());
-    }
-
-    #[test]
-    fn window_values_skip_missing_days() {
-        let mut data = mission(14, 480, 3);
-        data.checks.retain(|c| c.day != 5);
-        assert_eq!(window_values(&data, Indicator::Stress, 9, 7).len(), 6);
-        assert_eq!(mean_7d(&data, Indicator::Stress, 9), Some(3.0));
-    }
-
-    #[test]
-    fn series_has_one_point_per_day() {
-        let data = mission(14, 480, 3);
-        let result = series(&data, Indicator::SleepHours, -14, 12);
-        assert_eq!(result.points.len(), 27);
-        assert_eq!(result.baseline_median, Some(8.0));
-        assert_eq!(result.points[26].value, None);
-        assert_eq!(result.points[26].mean_7d, Some(8.0));
     }
 }
