@@ -356,7 +356,12 @@
       <span class="t" id="sc-{def.key}">{def.label}</span>
       <span class="val"><Ticker {value} /><small>/ {SCALE_MAX}</small></span>
     </div>
-    <div class="rate" onpointerdown={(e) => slide(e, def.key)} onpointermove={(e) => slide(e, def.key)}>
+    <div
+      class="rate"
+      role="presentation"
+      onpointerdown={(e) => slide(e, def.key)}
+      onpointermove={(e) => slide(e, def.key)}
+    >
       {#each Array.from({ length: SCALE_MAX + 1 }, (_, i) => i) as i (i)}
         <input
           type="radio"
