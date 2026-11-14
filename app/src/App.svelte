@@ -129,7 +129,7 @@
             aria-current={s.id === current.id ? 'page' : undefined}
             onclick={() => go(s.id)}
           >
-            <Icon name={s.icon} size={18} />
+            <Icon name={s.icon} size={18} active={s.id === current.id} />
             <span>{s.label}</span>
             {#if s.id === 'daily_check' && checkDue}
               <i class="due" aria-hidden="true" title="Due today"></i>
