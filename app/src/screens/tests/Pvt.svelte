@@ -106,10 +106,13 @@
 
   function input() {
     if (phase !== 'running') return;
-    const now = performance.now();
-    if (lit) {
-      trials.push({ kind: 'response', rt_ms: now - stimulusAt });
-      feedback = `${Math.round(now - stimulusAt)} ms`;
+    const rt = performance.now() - stimulusAt;
+    if (lit && rt >= PVT_TIMEOUT_MS) {
+      trials.push({ kind: 'timeout' });
+      feedback = 'No input';
+    } else if (lit) {
+      trials.push({ kind: 'response', rt_ms: rt });
+      feedback = `${Math.round(rt)} ms`;
     } else {
       trials.push({ kind: 'premature' });
       feedback = 'Too early';
