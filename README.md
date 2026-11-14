@@ -8,7 +8,7 @@ A daily health self-check for astronauts on long missions. NASA Space Apps Chall
 
 ## Pitch
 
-On the way to Mars, a crew is alone for months and the delay to Earth can be more than 20 minutes. Astro Vitals gives each astronaut a 2-minute daily check on a tablet: sleep, mood, stress, fluid, exercise, symptoms on a body figure, a reaction-time test and a vision test. A rule engine compares each value with the astronaut's own pre-flight baseline and NASA sources, and tells the astronaut what to do: self-care, tell the Crew Medical Officer, or send a packet to the flight surgeon.
+On the way to Mars, a crew is alone for months and a message to Earth can take more than 20 minutes. Astro Vitals gives each astronaut a short daily check on a tablet: sleep, mood, stress, fluid, exercise, symptoms on a body figure, a reaction-time test and a vision test. A rule engine compares each value with the astronaut's own pre-flight baseline and NASA sources, and tells the astronaut what to do: self-care, tell the Crew Medical Officer, or send a packet to the flight surgeon.
 
 ## Try a scenario
 
