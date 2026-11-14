@@ -258,7 +258,7 @@ A zero sleep duration (start equal to end) gives an error on `sleep_end_min`.
 - `pvt::LAPSE_MS = 355.0`. A reaction time at or above this value is a lapse.
 - `pvt::FALSE_START_MS = 100.0`. A reaction time below this value is a false start.
 - `false_starts = early_inputs + count(rt < 100)`.
-- `mean_rt_ms` is the mean of all reaction times at or above 100 ms. A 30000 ms no-response trial is in the mean.
+- `mean_rt_ms` is the mean of all reaction times at or above 100 ms. A 30000 ms no-response trial is a lapse. It is not in the mean.
 - `mean_rt_ms` is 0 if no valid trial exists. Then `pvt_mean_rt` has no value for that day.
 - `trials` is the number of reaction times.
 

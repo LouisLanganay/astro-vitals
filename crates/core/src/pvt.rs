@@ -14,11 +14,14 @@ pub fn score(submission: &PvtSubmission) -> PvtResult {
             false_starts = false_starts.saturating_add(1);
             continue;
         }
-        valid = valid.saturating_add(1);
-        total += rt;
         if rt >= LAPSE_MS {
             lapses = lapses.saturating_add(1);
         }
+        if rt >= NO_RESPONSE_MS {
+            continue;
+        }
+        valid = valid.saturating_add(1);
+        total += rt;
     }
     let mean_rt_ms = if valid == 0 {
         0.0
@@ -69,6 +72,7 @@ mod tests {
         let result = score(&submission(vec![NO_RESPONSE_MS, 300.0], 0));
         assert_eq!(result.lapses, 1);
         assert_eq!(result.false_starts, 0);
+        assert!((result.mean_rt_ms - 300.0).abs() < 1e-9);
     }
 
     #[test]
