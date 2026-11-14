@@ -570,9 +570,9 @@
       background-color var(--t-fast),
       transform var(--t-fast) var(--ease-out);
   }
-  .bm-row:hover {
+  @media (hover: hover) { .bm-row:hover {
     background: var(--well-2);
-  }
+  } }
   .bm-row:active {
     transform: scale(0.97);
   }

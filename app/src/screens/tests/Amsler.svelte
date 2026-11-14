@@ -11,6 +11,7 @@
     ondone: (distortion: boolean, cells: AmslerCell[]) => void;
   } = $props();
 
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   const CELL_MM = 5;
   const N = AMSLER_GRID_SIZE;
   const MOVES: Record<string, [number, number]> = {
@@ -57,8 +58,8 @@
   </p>
   {#if distortion}
     <p class="muted">
-      Select each cell where the lines are wavy, broken or absent. Use the mouse, or use the arrow
-      keys and the Space key. Then continue.
+      Select each cell where the lines are wavy, broken or absent.
+      {touch ? 'Tap each cell with your finger.' : 'Use the mouse, or use the arrow keys and the Space key.'} Then continue.
     </p>
   {:else}
     <p class="muted">Are lines of the grid wavy, broken or absent in an area?</p>
@@ -152,13 +153,17 @@
     opacity: 1;
     transform: none;
   }
-  .cell:not(:disabled):hover::after {
-    opacity: 0.35;
-    transform: scale(0.7);
+  @media (hover: hover) {
+    .cell:not(:disabled):hover::after {
+      opacity: 0.35;
+      transform: scale(0.7);
+    }
   }
-  .cell.on:not(:disabled):hover::after {
-    opacity: 1;
-    transform: none;
+  @media (hover: hover) {
+    .cell.on:not(:disabled):hover::after {
+      opacity: 1;
+      transform: none;
+    }
   }
   .cell:focus-visible {
     outline: 2px solid var(--ui);
