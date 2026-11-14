@@ -463,6 +463,40 @@ const SCENARIOS: Record<ScenarioId, Omit<ScenarioInfo, 'id' | 'mission_day'>> = 
   },
 };
 
+type TomlValue = string | number;
+
+function parseRules(src: string) {
+  const drift: Record<string, TomlValue> = {};
+  const rules: Record<string, TomlValue>[] = [];
+  let table: Record<string, TomlValue> | null = null;
+  for (const raw of src.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    if (line === '[drift]') table = drift;
+    else if (line === '[[rules]]') rules.push((table = {}));
+    else if (table) {
+      const at = line.indexOf('=');
+      const v = line.slice(at + 1).trim();
+      table[line.slice(0, at).trim()] = v.startsWith('"') ? (JSON.parse(v) as string) : Number(v);
+    }
+  }
+  const field = (r: Record<string, TomlValue>, k: string) => (r[k] ?? null) as never;
+  return {
+    drift: { self_care: Number(drift.self_care), tell_cmo: Number(drift.tell_cmo) },
+    rules: rules.map((r) => ({
+      id: r.id, indicator: r.indicator, kind: r.kind, level: r.level,
+      threshold: field(r, 'threshold'), window_days: field(r, 'window_days'), min_days: field(r, 'min_days'),
+      sustain_days: field(r, 'sustain_days'), body_region: field(r, 'body_region'),
+      action: r.action, explanation: r.explanation, source: r.source,
+    })),
+  };
+}
+
+async function ruleCatalog() {
+  const src = (await import('../../../rules/rules.toml?raw')).default;
+  return parseRules(src);
+}
+
 type Args = Record<string, unknown>;
 const delay = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 60));
 
@@ -504,6 +538,8 @@ mockIPC((cmd, payload) => {
     case 'set_settings':
       doc.settings = structuredClone(args.settings as Settings);
       return delay(null);
+    case 'rules':
+      return ruleCatalog();
     case 'plugin:dialog|save':
       return delay('/home/crew/astro-vitals-packet.json');
     default:
