@@ -35,7 +35,7 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 ## Daily check
 
 1. Open "Daily check". Fill each field. Select "Save".
-2. Expected: the Today screen shows the daily check as done in "Due today". The streak is 1.
+2. Expected: the Today screen shows the daily check as done in "Due today". The streak increases by 1.
 3. Enter a fluid value of -1. Expected: the error shows at the fluid field.
 
 ## PVT-B
