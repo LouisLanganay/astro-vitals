@@ -12,6 +12,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 
 pub const RULES_TOML: &str = include_str!("../../../rules/rules.toml");
+pub const CORRUPT_LABEL: &str = "browser storage, key astro-vitals.document.corrupt";
 
 #[derive(Deserialize)]
 pub struct Request {
@@ -89,6 +90,7 @@ impl Session {
                 let notices = self
                     .corrupt_backup
                     .clone()
+                    .or_else(|| self.corrupt.then(|| CORRUPT_LABEL.to_string()))
                     .map(|backup_path| Notice::DataFileCorrupt { backup_path })
                     .into_iter()
                     .collect();
