@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:web": "cargo build -p astro-vitals-web --target wasm32-unknown-unknown --release && vite build --mode web && cp ../target/wasm32-unknown-unknown/release/astro_vitals_web.wasm ../target/pages/",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "tauri": "tauri"
   },
