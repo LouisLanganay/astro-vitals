@@ -17,6 +17,7 @@
     ondone: (logmar: number) => void;
   } = $props();
 
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   const DIRECTIONS = ['right', 'down', 'left', 'up'] as const;
   type Direction = (typeof DIRECTIONS)[number];
 
@@ -94,8 +95,9 @@
   </header>
   <p>
     Keep your {eye} eye {VIEWING_DISTANCE_CM} cm from the screen. The open side of the E points up,
-    down, left or right. Press the arrow key for that direction, or use the buttons. If you cannot
-    see the direction, select one direction.
+    down, left or right.
+    {touch ? 'Tap the button for that direction.' : 'Press the arrow key for that direction, or use the buttons.'}
+    If you cannot see the direction, select one direction.
   </p>
   {#if started}
     <div class="stage">
@@ -178,6 +180,13 @@
       '. down .';
     gap: 6px;
     justify-content: center;
+  }
+  @media (pointer: coarse) {
+    .pad {
+      grid-template-columns: repeat(3, 76px);
+      grid-template-rows: repeat(3, 64px);
+      gap: 8px;
+    }
   }
   .pad .btn {
     padding: 0;
