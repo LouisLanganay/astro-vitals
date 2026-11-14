@@ -231,11 +231,11 @@ interface Rule {
   source: string;
 }
 
-const PVT_ACTION_1 = 'Check your sleep for the last nights. Take a break before a precise task.';
+const PVT_ACTION_1 = 'Look at your sleep for the last 3 nights. Take a break before a precise task.';
 const PVT_ACTION_2 = 'Tell the Crew Medical Officer. Avoid critical tasks until you sleep more.';
 const RULES: Rule[] = [
   { id: 'sleep_7d_below_6h', ind: 'sleep_hours', kind: 'absolute', limit: 6, window: 7, min: 5, level: 'self_care', region: 'head',
-    action: 'Protect your next sleep period. Dim the light 1 hour before. Plan a nap if the schedule permits.',
+    action: 'Protect your next sleep period. Dim the light 1 hour before you sleep. Plan a nap if the schedule permits.',
     explanation: 'Your mean sleep for 7 days is below 6 hours. Sleep below 6 hours slows reaction time.', source: SRC.sleep },
   { id: 'sleep_3d_below_5h', ind: 'sleep_hours', kind: 'absolute', limit: 5, window: 3, min: 3, level: 'tell_cmo', region: 'head',
     action: 'Tell the Crew Medical Officer. Avoid critical tasks until you sleep more.',
@@ -305,7 +305,7 @@ function symptomRules(date: IsoDate): FiredRule[] {
     while (doc.checks[addDays(date, -n)]?.symptoms.some((x) => x.kind === s.kind)) n++;
     if (n > 7) {
       out.push({ rule_id: 'symptom_longer_than_7_days', level: 'tell_cmo', action: 'Tell the Crew Medical Officer.',
-        explanation: 'This symptom is present for more than 7 consecutive days. On the ISS, a symptom of more than 1 week is a notable event.',
+        explanation: 'This symptom is present for more than 7 days in sequence. On the ISS, a symptom of more than 1 week is a notable event.',
         body_region: s.region, source: SRC.symptom, subject: { type: 'symptom', value: s.kind }, value: n });
     }
     if (s.treated && s.improved === false) {
