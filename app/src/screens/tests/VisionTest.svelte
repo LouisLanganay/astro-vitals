@@ -3,6 +3,7 @@
   import { errorText, toAppError } from '../../lib/errors';
   import Icon from '../../lib/Icon.svelte';
   import LevelBadge from '../../lib/LevelBadge.svelte';
+  import { calibrationFits, calibrationSaved } from '../../lib/scale';
   import { app, navigate, refresh } from '../../lib/state.svelte';
   import {
     VIEWING_DISTANCE_CM,
@@ -38,7 +39,8 @@
   let acuity = 0;
   let results: EyeResult[] = [];
 
-  const calibration = $derived(settings?.calibration ?? null);
+  let fits = $state(calibrationFits());
+  const calibration = $derived(fits ? (settings?.calibration ?? null) : null);
   const shown = $derived(step === 'done' ? saved : (app.day?.vision ?? null));
   const due = $derived(app.day?.mission.due.some((t) => t.kind === 'vision_test') ?? false);
 
@@ -65,6 +67,8 @@
     try {
       const next = { ...settings, calibration: { px_per_mm } };
       await setSettings(next);
+      calibrationSaved();
+      fits = true;
       settings = next;
       await refresh();
       step = 'intro';

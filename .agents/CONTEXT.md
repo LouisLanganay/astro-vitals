@@ -61,6 +61,8 @@ All data stays on the device. Specification: [SPEC.md](./SPEC.md). Evidence: [RE
 - Vision rules compare with the latest pre-flight test. `vision_change` uses the last test, `vision_persistent` the last 2 tests.
 - A scenario has data for mission days -14 to 119. Mission day 120 (today) has no data.
 - Core tests: `crates/core/tests/scenarios.rs` (SPEC Verification, rule content) and `edge_cases.rs` (SPEC Edge cases).
+- Touch screens: `app/index.html` sets `initial-scale=1.15` with no `width`. A phone or a tablet browser then shows all the interface 15% larger. A desktop browser and the Tauri window ignore it.
+- The vision calibration is in CSS pixels. `app/src/lib/scale.ts` keeps the page scale of the calibration in `localStorage`. A calibration made at another scale is not used: the screen asks for a new one.
 - Manual demo: [DEMO.md](./DEMO.md).
 - Do not add a dependency without an agreement: `Cargo.lock` and `app/pnpm-lock.yaml` are shared.
 - Commit messages: `chore: ...`, `docs: ...`, `feat: ...`, `fix: ...`.
