@@ -197,10 +197,13 @@ pub fn evaluate(
 ) -> Assessment {
     let mut fired = Vec::new();
     let mut short: HashSet<Indicator> = HashSet::new();
+    let mut evaluable: HashSet<Indicator> = HashSet::new();
     for rule in &rules.rules {
         match rule.kind {
             RuleKind::Absolute => {
-                if !absolute(day, data, rule, settings, &mut fired) {
+                if absolute(day, data, rule, settings, &mut fired) {
+                    evaluable.insert(rule.indicator);
+                } else {
                     short.insert(rule.indicator);
                 }
             }
@@ -217,7 +220,11 @@ pub fn evaluate(
     let level = fired.iter().map(|f| f.level).max().unwrap_or(Level::Ok);
     let indicators = Indicator::numeric()
         .iter()
-        .map(|&indicator| indicator_status(day, data, indicator, &fired, &short))
+        .map(|&indicator| {
+            let all_short = short.contains(&indicator) && !evaluable.contains(&indicator);
+            let min_days = drift_min_days(rules, indicator);
+            indicator_status(day, data, indicator, &fired, all_short, min_days)
+        })
         .collect();
     let preflight_days = Indicator::numeric()
         .iter()
@@ -235,12 +242,26 @@ pub fn evaluate(
     }
 }
 
+fn drift_min_days(rules: &RuleSet, indicator: Indicator) -> usize {
+    rules
+        .rules
+        .iter()
+        .filter(|r| r.kind == RuleKind::Drift && r.indicator == indicator)
+        .map(|r| {
+            r.min_days
+                .map_or(baseline::DEFAULT_DRIFT_MIN_DAYS, |m| m as usize)
+        })
+        .min()
+        .unwrap_or(baseline::DEFAULT_DRIFT_MIN_DAYS)
+}
+
 fn indicator_status(
     day: MissionDay,
     data: &MissionData,
     indicator: Indicator,
     fired: &[FiredRule],
-    short: &HashSet<Indicator>,
+    all_short: bool,
+    drift_min_days: usize,
 ) -> IndicatorStatus {
     let base = baseline::baseline(data, indicator);
     let mean_7d = baseline::mean_7d(data, indicator, day);
@@ -251,14 +272,13 @@ fn indicator_status(
         .max();
     let state = if level.is_some() {
         IndicatorState::Flagged
-    } else if mean_7d.is_none() || short.contains(&indicator) {
+    } else if mean_7d.is_none() || all_short {
         IndicatorState::NotEnoughData
     } else {
         IndicatorState::Ok
     };
-    let drift_score = base.and_then(|b| {
-        baseline::drift_score_from(&b, data, indicator, day, baseline::DEFAULT_DRIFT_MIN_DAYS)
-    });
+    let drift_score =
+        base.and_then(|b| baseline::drift_score_from(&b, data, indicator, day, drift_min_days));
     IndicatorStatus {
         indicator,
         state,
@@ -940,6 +960,60 @@ level = "self_care"
             .find(|s| s.indicator == Indicator::Stress);
         assert_eq!(status.map(|s| s.state), Some(IndicatorState::Flagged));
         assert_eq!(status.and_then(|s| s.baseline_median), Some(3.5));
+    }
+
+    #[test]
+    fn status_drift_score_uses_rule_min_days() {
+        let fields = r#"
+indicator = "stress"
+kind = "drift"
+threshold = 2.0
+min_days = 3
+level = "self_care"
+"#;
+        let set = rules(&rule_toml("stress_drift", fields));
+        let mut data = stress_mission();
+        data.checks.retain(|c| c.day < 0 || c.day >= 4);
+        let result = evaluate(6, &data, &set, &Settings::default());
+        assert_eq!(ids(&result), ["stress_drift"]);
+        let status = result
+            .indicators
+            .iter()
+            .find(|s| s.indicator == Indicator::Stress);
+        assert!(status.and_then(|s| s.drift_score).is_some());
+    }
+
+    #[test]
+    fn one_evaluable_absolute_rule_gives_a_state() {
+        let short = r#"
+indicator = "sleep_hours"
+kind = "absolute"
+threshold = 5.0
+window_days = 3
+level = "tell_cmo"
+"#;
+        let long = r#"
+indicator = "sleep_hours"
+kind = "absolute"
+threshold = 6.0
+window_days = 7
+min_days = 5
+level = "self_care"
+"#;
+        let src = format!(
+            "{}{}",
+            rule_toml("sleep_3d", short),
+            rule_toml("sleep_7d", long)
+        );
+        let set = rules(&src);
+        let data = data_of((4..7).map(|d| sleep_check(d, 480)));
+        let result = evaluate(6, &data, &set, &Settings::default());
+        assert!(result.fired.is_empty());
+        let status = result
+            .indicators
+            .iter()
+            .find(|s| s.indicator == Indicator::SleepHours);
+        assert_eq!(status.map(|s| s.state), Some(IndicatorState::Ok));
     }
 
     #[test]
