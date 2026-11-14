@@ -769,9 +769,11 @@
       box-shadow var(--t-fast) var(--ease-out),
       transform var(--t-fast) var(--ease-out);
   }
-  .rate label:hover {
-    color: var(--fg);
-    background: var(--well-2);
+  @media (hover: hover) {
+    .rate label:hover {
+      color: var(--fg);
+      background: var(--well-2);
+    }
   }
   .rate label:active {
     transform: scale(0.94);
@@ -947,9 +949,9 @@
       filter var(--t-fast) var(--ease-out),
       transform var(--t-fast) var(--ease-out);
   }
-  .pm button:hover {
+  @media (hover: hover) { .pm button:hover {
     filter: brightness(1.12);
-  }
+  } }
   .pm button:active {
     transform: scale(0.94);
   }
@@ -968,9 +970,9 @@
       background-color var(--t-fast) var(--ease-out),
       box-shadow var(--t-fast) var(--ease-out);
   }
-  .tog:hover {
+  @media (hover: hover) { .tog:hover {
     background: var(--well-2);
-  }
+  } }
   .tog input {
     appearance: none;
     -webkit-appearance: none;
@@ -1139,7 +1141,7 @@
       gap: 3px;
     }
     .rate label {
-      height: 34px;
+      height: 42px;
       font-size: 12px;
       border-radius: 8px;
     }

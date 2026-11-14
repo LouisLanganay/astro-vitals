@@ -50,9 +50,9 @@
     box-shadow: inset 0 0 0 1px var(--line);
     transition: box-shadow var(--t-mid) var(--ease-out);
   }
-  .ins:hover {
+  @media (hover: hover) { .ins:hover {
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lc) 28%, var(--line));
-  }
+  } }
   .ih {
     display: flex;
     justify-content: space-between;

@@ -25,20 +25,21 @@
   interface ScreenDef {
     id: Screen;
     label: string;
+    short: string;
     title: string;
     icon: IconName;
     component: Component;
   }
 
   const SCREENS: ScreenDef[] = [
-    { id: 'home', label: 'Today', title: 'Today', icon: 'home', component: Home },
-    { id: 'daily_check', label: 'Daily check', title: 'Daily check', icon: 'check', component: DailyCheck },
-    { id: 'body', label: 'Body', title: 'Body', icon: 'body', component: BodyFigure },
-    { id: 'trends', label: 'Trends', title: 'Trends', icon: 'trends', component: Trends },
-    { id: 'pvt', label: 'PVT-B', title: 'PVT-B reaction test', icon: 'bolt', component: Pvt },
-    { id: 'vision', label: 'Vision test', title: 'Vision test', icon: 'eye', component: VisionTest },
-    { id: 'export', label: 'Export', title: 'Packet for the flight surgeon', icon: 'export', component: PacketExport },
-    { id: 'settings', label: 'Settings', title: 'Rules and settings', icon: 'settings', component: Settings },
+    { id: 'home', label: 'Today', short: 'Today', title: 'Today', icon: 'home', component: Home },
+    { id: 'daily_check', label: 'Daily check', short: 'Check', title: 'Daily check', icon: 'check', component: DailyCheck },
+    { id: 'body', label: 'Body', short: 'Body', title: 'Body', icon: 'body', component: BodyFigure },
+    { id: 'trends', label: 'Trends', short: 'Trends', title: 'Trends', icon: 'trends', component: Trends },
+    { id: 'pvt', label: 'PVT-B', short: 'PVT-B', title: 'PVT-B reaction test', icon: 'bolt', component: Pvt },
+    { id: 'vision', label: 'Vision test', short: 'Vision', title: 'Vision test', icon: 'eye', component: VisionTest },
+    { id: 'export', label: 'Export', short: 'Export', title: 'Packet for the flight surgeon', icon: 'export', component: PacketExport },
+    { id: 'settings', label: 'Settings', short: 'Rules', title: 'Rules and settings', icon: 'settings', component: Settings },
   ];
 
   let dismissed = $state(false);
@@ -101,6 +102,11 @@
           <b>Astro Vitals</b>
           <span>Crew health</span>
         </div>
+        {#if day != null}
+          <span class="mday" aria-label="Mission day {day} of {MISSION_DAYS}">
+            {day < 0 ? 'Pre' : 'Day'} <b>{Math.abs(day)}</b>/{MISSION_DAYS}
+          </span>
+        {/if}
         <button
           class="btn ghost icon theme"
           onclick={toggleTheme}
@@ -125,11 +131,13 @@
         {#each SCREENS as s (s.id)}
           <button
             class="item"
+            title={s.label}
             aria-current={s.id === current.id ? 'page' : undefined}
             onclick={() => go(s.id)}
           >
             <Icon name={s.icon} size={18} active={s.id === current.id} />
-            <span>{s.label}</span>
+            <span class="long">{s.label}</span>
+            <span class="short" aria-hidden="true">{s.short}</span>
             {#if s.id === 'daily_check' && checkDue}
               <i class="due" aria-hidden="true" title="Due today"></i>
             {/if}
@@ -212,7 +220,8 @@
   .app {
     max-width: 1380px;
     margin: 0 auto;
-    padding: 0 max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px));
+    padding: 0 max(16px, env(safe-area-inset-right, 0px)) calc(104px + env(safe-area-inset-bottom, 0px))
+      max(16px, env(safe-area-inset-left, 0px));
     display: grid;
     column-gap: 36px;
     grid-template-columns: minmax(0, 1fr);
@@ -278,7 +287,7 @@
     fill: var(--ui);
     stroke: none;
   }
-  .brand b {
+  .brand .bt b {
     display: block;
     font-weight: 500;
     font-size: 15.5px;
@@ -293,18 +302,37 @@
   .theme .pop {
     display: grid;
   }
+  .mday {
+    flex: none;
+    white-space: nowrap;
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--well);
+    box-shadow: inset 0 0 0 1px var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .mday b {
+    color: var(--fg);
+    font-weight: 500;
+  }
 
   .nav {
-    position: relative;
-    display: flex;
-    gap: 4px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    margin: 0 -4px;
-    padding: 4px;
-  }
-  .nav::-webkit-scrollbar {
-    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 2px;
+    padding: 6px max(6px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px))
+      max(6px, env(safe-area-inset-left, 0px));
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: 0 -1px 0 var(--line);
   }
   .pill {
     position: absolute;
@@ -326,27 +354,33 @@
   .item {
     position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
-    flex: none;
-    min-height: 44px;
-    padding: 10px 14px;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+    min-height: 56px;
+    padding: 8px 2px;
     border: 0;
     border-radius: 14px;
     background: none;
     color: var(--muted);
     font-weight: 500;
-    font-size: 14.5px;
+    font-size: 10.5px;
     white-space: nowrap;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     transition:
       color var(--t-fast),
       background-color var(--t-fast),
       transform var(--t-fast) var(--ease-out);
   }
-  .item:hover {
-    color: var(--fg);
-    background: color-mix(in srgb, var(--well) 70%, transparent);
+  @media (hover: hover) {
+    .item:hover {
+      color: var(--fg);
+      background: color-mix(in srgb, var(--well) 70%, transparent);
+    }
   }
   .item:active {
     transform: scale(0.97);
@@ -355,7 +389,30 @@
     color: var(--fg);
     background: none;
   }
+  .nav {
+    transition: transform 240ms var(--ease-out);
+  }
+  :global(html[data-test-running]) .nav {
+    transform: translateY(110%);
+    pointer-events: none;
+  }
+  .item .long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .item .short {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .due {
+    position: absolute;
+    top: 7px;
+    right: calc(50% - 17px);
     width: 6px;
     height: 6px;
     border-radius: 50%;
@@ -393,11 +450,46 @@
       padding-top: 34px;
       gap: 28px;
     }
+    .nav,
+    :global(html[data-test-running]) .nav {
+      transform: none;
+      pointer-events: auto;
+    }
     .nav {
+      position: relative;
+      inset: auto;
+      z-index: auto;
+      display: flex;
       flex-direction: column;
+      gap: 4px;
+      margin: 0 -4px;
+      padding: 4px;
+      background: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      box-shadow: none;
+    }
+    .item {
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 12px;
+      min-height: 44px;
+      padding: 10px 14px;
+      font-size: 14.5px;
+    }
+    .item .long {
+      position: static;
+      width: auto;
+      height: auto;
       overflow: visible;
+      clip-path: none;
+    }
+    .item .short,
+    .mday {
+      display: none;
     }
     .due {
+      position: static;
       margin-left: auto;
     }
     .mission {
@@ -408,6 +500,52 @@
       border-radius: 20px;
       background: linear-gradient(180deg, var(--card-a), var(--card-b));
       box-shadow: inset 0 1px 0 var(--line), 0 0 0 1px var(--edge);
+    }
+  }
+
+  @media (min-width: 1000px) and (max-width: 1199px) {
+    .app {
+      grid-template-columns: 64px minmax(0, 1fr);
+      column-gap: 28px;
+    }
+    .brand {
+      flex-direction: column;
+      padding: 0;
+    }
+    .brand .bt {
+      display: none;
+    }
+    .item {
+      justify-content: center;
+      padding: 12px 0;
+    }
+    .item .long {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .due {
+      position: absolute;
+      top: 9px;
+      right: 11px;
+    }
+    .mission {
+      padding: 14px 6px;
+      align-items: center;
+      text-align: center;
+    }
+    .mission .eyebrow,
+    .mission .big small {
+      display: none;
+    }
+    .mission .big {
+      font-size: 22px;
+    }
+    .mbar {
+      width: 100%;
     }
   }
 

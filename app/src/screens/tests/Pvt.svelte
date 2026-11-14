@@ -26,6 +26,7 @@
 
   type Phase = 'intro' | 'running' | 'saving' | 'done' | 'cancelled' | 'failed';
 
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   let phase = $state<Phase>('intro');
   let lit = $state(false);
   let feedback = $state('');
@@ -166,6 +167,12 @@
   }
 
   $effect(() => {
+    const root = document.documentElement;
+    root.toggleAttribute('data-test-running', phase === 'running');
+    return () => root.removeAttribute('data-test-running');
+  });
+
+  $effect(() => {
     if (phase === 'running') target?.focus();
   });
 
@@ -231,8 +238,8 @@
     </header>
     <p>
       The signal is a counter. It shows after a random wait of {PVT_INTERVAL_MIN_MS / 1000} to
-      {PVT_INTERVAL_MAX_MS / 1000} seconds. Click the box or press the Space key as soon as you see
-      it. The test runs for {PVT_DURATION_MS / 60000} minutes.
+      {PVT_INTERVAL_MAX_MS / 1000} seconds. {touch ? 'Tap the box' : 'Click the box or press the Space key'} as soon as
+      you see it. The test runs for {PVT_DURATION_MS / 60000} minutes.
     </p>
 
     {#if phase === 'running'}
@@ -354,7 +361,7 @@
       </p>
       <ol class="steps">
         <li>Look at the box and wait for the signal.</li>
-        <li>When the counter shows, press the Space key or click the box at once.</li>
+        <li>When the counter shows, {touch ? 'tap the box' : 'press the Space key or click the box'} at once.</li>
         <li>Do not press before the signal. An early input is a false start.</li>
         <li>Keep this window in front for the {PVT_DURATION_MS / 60000} minutes.</li>
       </ol>
