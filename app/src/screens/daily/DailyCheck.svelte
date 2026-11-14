@@ -27,26 +27,25 @@
     type SymptomKind,
   } from '../../lib/types';
   import { minutesError, num } from './num';
-  import FeelFace, { type Feeling } from './FeelFace.svelte';
+  import DotSlider from './DotSlider.svelte';
+  import FeelFace from './FeelFace.svelte';
   import SleepBar from './SleepBar.svelte';
 
   type ScaleKey = 'sleep_quality' | 'mood' | 'stress' | 'tiredness' | 'workload';
   type NumberKey = 'fluid_l' | 'exercise_resistive_min' | 'exercise_aerobic_min';
-  type ScaleDef = { key: ScaleKey; label: string; help: string; lo: string; hi: string };
+  type ScaleDef = { key: ScaleKey; label: string; icon?: IconName; help: string };
 
   const SLEEP_QUALITY: ScaleDef = {
     key: 'sleep_quality',
     label: 'Sleep quality',
     help: '0 = very bad sleep. 10 = very good sleep.',
-    lo: 'very bad',
-    hi: 'very good',
   };
 
   const SCALES: ScaleDef[] = [
-    { key: 'mood', label: 'Mood', help: '0 = very bad mood. 10 = very good mood.', lo: 'very bad', hi: 'very good' },
-    { key: 'stress', label: 'Stress', help: '0 = no stress. 10 = the highest stress.', lo: 'none', hi: 'the highest' },
-    { key: 'tiredness', label: 'Tiredness', help: '0 = fully awake. 10 = too tired to work.', lo: 'fully awake', hi: 'too tired to work' },
-    { key: 'workload', label: 'Workload', help: '0 = no work. 10 = more work than you can do.', lo: 'no work', hi: 'too much work' },
+    { key: 'mood', label: 'Mood', icon: 'smile', help: '0 = very bad mood. 10 = very good mood.' },
+    { key: 'stress', label: 'Stress', icon: 'wave', help: '0 = no stress. 10 = the highest stress.' },
+    { key: 'tiredness', label: 'Tiredness', icon: 'battery', help: '0 = fully awake. 10 = too tired to work.' },
+    { key: 'workload', label: 'Workload', icon: 'brief', help: '0 = no work. 10 = more work than you can do.' },
   ];
 
   const NUMBERS: {
@@ -235,13 +234,6 @@
     return `${SEVERITY_SHORT[s.severity - 1] ?? s.severity}, ${REGION_LABEL[s.region].toLowerCase()}, ${treated}`;
   }
 
-  function slide(e: PointerEvent, key: ScaleKey) {
-    if (e.type === 'pointermove' && e.buttons === 0) return;
-    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const index = Math.floor(((e.clientX - box.left) / box.width) * (SCALE_MAX + 1));
-    scales[key] = Math.max(0, Math.min(SCALE_MAX, index));
-  }
-
   function step(def: (typeof NUMBERS)[number], dir: 1 | -1, el: HTMLElement | null) {
     const now = numbers[def.key] ?? 0;
     const next = Math.min(def.max, Math.max(0, now + dir * def.inc));
@@ -337,47 +329,24 @@
   </header>
 {/snippet}
 
-{#snippet scale(def: ScaleDef, face: boolean)}
+{#snippet scale(def: ScaleDef)}
   {@const field = `answers.${def.key}`}
-  {@const value = scales[def.key]}
-  <div
-    class="fld"
-    class:feel={face}
-    class:bad={invalid(field)}
-    role="radiogroup"
-    aria-labelledby="sc-{def.key}"
-    aria-describedby="sch-{def.key}"
-    aria-invalid={invalid(field)}
-  >
-    {#if face}
-      <span class="ff"><FeelFace feeling={def.key as Feeling} {value} /></span>
-    {/if}
+  <div class="fld">
     <div class="fl">
-      <span class="t" id="sc-{def.key}">{def.label}</span>
-      <span class="val"><Ticker {value} /><small>/ {SCALE_MAX}</small></span>
+      <span class="t" id="sc-{def.key}">
+        {#if def.icon}<Icon name={def.icon} size={15} />{/if}
+        {def.label}
+      </span>
+      <span class="val"><Ticker value={scales[def.key]} /><small>/ {SCALE_MAX}</small></span>
     </div>
-    <div
-      class="rate"
-      role="presentation"
-      onpointerdown={(e) => slide(e, def.key)}
-      onpointermove={(e) => slide(e, def.key)}
-    >
-      {#each Array.from({ length: SCALE_MAX + 1 }, (_, i) => i) as i (i)}
-        <input
-          type="radio"
-          id="sc-{def.key}-{i}"
-          name="sc-{def.key}"
-          value={i}
-          bind:group={scales[def.key]}
-        />
-        <label for="sc-{def.key}-{i}" class:lo={i < value} style:--d="{i * 14}ms">{i}</label>
-      {/each}
-    </div>
-    <div class="ends" id="sch-{def.key}">
-      <span>{def.lo}</span>
-      <span class="sr">{def.help}</span>
-      <span>{def.hi}</span>
-    </div>
+    <DotSlider
+      bind:value={scales[def.key]}
+      max={SCALE_MAX}
+      labelledby="sc-{def.key}"
+      describedby="sch-{def.key}"
+      invalid={!!invalid(field)}
+    />
+    <span class="sr" id="sch-{def.key}">{def.help}</span>
     {@render fieldError(field)}
   </div>
 {/snippet}
@@ -469,7 +438,7 @@
             </div>
             <SleepBar start={sleepStart} end={sleepEnd} />
           </div>
-          {@render scale(SLEEP_QUALITY, false)}
+          {@render scale(SLEEP_QUALITY)}
           <div class="fld">
             <label class="tog">
               <input type="checkbox" bind:checked={sleepAid} />
@@ -481,10 +450,22 @@
 
         <section class="card rise" style:--i={1} aria-labelledby="dc-feel">
           {@render head('dc-feel', SECTION_ICON.feel, 'How you feel', '')}
-          <div class="scales">
-            {#each SCALES as def (def.key)}
-              {@render scale(def, true)}
-            {/each}
+          <div class="feel">
+            <div class="feel-in">
+            <div class="ff">
+              <FeelFace
+                mood={scales.mood}
+                stress={scales.stress}
+                tiredness={scales.tiredness}
+                workload={scales.workload}
+              />
+            </div>
+            <div class="scales">
+              {#each SCALES as def (def.key)}
+                {@render scale(def)}
+              {/each}
+            </div>
+            </div>
           </div>
         </section>
       </div>
@@ -765,121 +746,34 @@
   .scales {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-  }
-  .rate {
-    display: grid;
-    grid-template-columns: repeat(11, minmax(0, 1fr));
-    gap: 4px;
-    touch-action: pan-y;
+    gap: 16px;
   }
   .feel {
+    container-type: inline-size;
+  }
+  .feel-in {
     display: grid;
-    grid-template-columns: 84px minmax(0, 1fr);
-    grid-template-areas:
-      'face head'
-      'face rate'
-      'face ends'
-      'error error';
-    gap: 8px 18px;
-    align-items: center;
-    padding: 14px 16px 12px 14px;
-    border-radius: 20px;
-    background: var(--well);
-    box-shadow: inset 0 0 0 1px var(--line);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
   }
-  .feel .ff {
-    grid-area: face;
-    padding: 2px;
+  .ff {
+    width: 124px;
+    margin: 0 auto;
   }
-  .feel .fl {
-    grid-area: head;
-  }
-  .feel .rate {
-    grid-area: rate;
-  }
-  .feel .ends {
-    grid-area: ends;
-  }
-  .feel :global(.error) {
-    grid-area: error;
-  }
-  .feel .rate label {
-    background: var(--well-2);
-  }
-  .rate input {
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
-    pointer-events: none;
-  }
-  .rate label {
-    display: grid;
-    place-items: center;
-    height: 38px;
-    border-radius: 10px;
-    background: var(--well);
-    box-shadow: inset 0 0 0 1px var(--line);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--muted);
-    cursor: pointer;
-    user-select: none;
-    font-variant-numeric: tabular-nums;
-    -webkit-tap-highlight-color: transparent;
-    transition:
-      background-color var(--t-fast) var(--ease-out),
-      color var(--t-fast) var(--ease-out),
-      box-shadow var(--t-fast) var(--ease-out),
-      transform var(--t-fast) var(--ease-out);
-  }
-  @media (hover: hover) {
-    .rate label:hover {
-      color: var(--fg);
-      background: var(--well-2);
+  @container (min-width: 440px) {
+    .feel-in {
+      grid-template-columns: 168px minmax(0, 1fr);
+      align-items: center;
+      gap: 28px;
+    }
+    .ff {
+      width: 168px;
     }
   }
-  .rate label:active {
-    transform: scale(0.94);
-  }
-  .rate label.lo {
-    color: var(--fg);
-    background: color-mix(in srgb, var(--ui) 16%, var(--well));
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui) 18%, transparent);
-    transition-delay: var(--d);
-  }
-  .rate input:checked + label {
-    color: var(--on-ui);
-    background: linear-gradient(180deg, var(--ui), var(--ui-2));
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.25),
-      0 4px 14px color-mix(in srgb, var(--ui) 35%, transparent);
-    animation: pill-pop var(--t-slow) var(--ease-spring);
-  }
-  .rate input:focus-visible + label {
-    outline: 2px solid var(--ui);
-    outline-offset: 2px;
-  }
-  @keyframes pill-pop {
-    0% {
-      transform: scale(0.86);
-    }
-    100% {
-      transform: none;
-    }
-  }
-  .ends {
+  .fl .t {
     display: flex;
-    justify-content: space-between;
-    font-size: 11.5px;
-    color: var(--faint);
-  }
-  .fld.bad .rate label {
-    box-shadow: inset 0 0 0 1.5px var(--red);
-  }
-  .fld[aria-invalid='true'] {
-    box-shadow: none !important;
+    align-items: center;
+    gap: 8px;
   }
 
   .times {
@@ -1250,24 +1144,6 @@
   }
 
   @media (max-width: 480px) {
-    .rate {
-      gap: 3px;
-    }
-    .feel {
-      grid-template-columns: 52px minmax(0, 1fr);
-      grid-template-areas:
-        'face head'
-        'rate rate'
-        'ends ends'
-        'error error';
-      gap: 10px 14px;
-      padding: 12px;
-    }
-    .rate label {
-      height: 42px;
-      font-size: 12px;
-      border-radius: 8px;
-    }
     .times input.bare.bare.bare {
       font-size: 28px;
     }
@@ -1277,10 +1153,6 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .rate label.lo {
-      transition-delay: 0ms;
-    }
-    .rate input:checked + label,
     .save.ok {
       animation: none;
     }
