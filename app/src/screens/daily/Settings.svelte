@@ -289,7 +289,7 @@
             />
             <span class="help">
               The sum of resistive and aerobic exercise that you must do each day. The exercise rule
-              compares your 7-day total with this value.
+              compares your mean for 7 days with this value.
             </span>
             {@render fieldError('exercise_prescription_min')}
           </label>
