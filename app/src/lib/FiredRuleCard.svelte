@@ -27,19 +27,21 @@
     <p class="fact">{fact}</p>
   {/if}
   <p class="why">{rule.explanation}</p>
-  <p class="src">
-    <Icon name="link" size={13} />
-    {#if isUrl(rule.source)}
-      <a href={rule.source} target="_blank" rel="noopener noreferrer" aria-label="Source: {sourceLabel(rule.source)}">
-        {sourceLabel(rule.source)}
-      </a>
-    {:else}
-      {rule.source}
+  <div class="foot">
+    <p class="src">
+      <Icon name="link" size={13} />
+      {#if isUrl(rule.source)}
+        <a href={rule.source} target="_blank" rel="noopener noreferrer" aria-label="Source: {sourceLabel(rule.source)}">
+          {sourceLabel(rule.source)}
+        </a>
+      {:else}
+        {rule.source}
+      {/if}
+    </p>
+    {#if children}
+      <div class="btns">{@render children()}</div>
     {/if}
-  </p>
-  {#if children}
-    <div class="btns">{@render children()}</div>
-  {/if}
+  </div>
 </article>
 
 <style>
@@ -82,6 +84,16 @@
   .src {
     font-size: 13px;
     color: var(--muted);
+  }
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+  }
+  .foot .btns {
+    margin-left: auto;
   }
   .src {
     display: flex;

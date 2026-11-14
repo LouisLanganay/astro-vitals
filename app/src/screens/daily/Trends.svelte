@@ -174,6 +174,15 @@
               >
                 <Icon name="focus" size={15} />
               </button>
+            {:else}
+              <button
+                class="btn ghost sm icon"
+                aria-label="Show all indicators"
+                title="Show all indicators"
+                onclick={() => navigate('trends')}
+              >
+                <Icon name="close" size={15} />
+              </button>
             {/if}
           </div>
         </div>
@@ -223,11 +232,6 @@
           <p class="banner error" role="alert">{errorText(result)}</p>
         {/if}
 
-        {#if shown.length === 1}
-          <div class="foot">
-            <button class="btn ghost sm" onclick={() => navigate('trends')}>Show all indicators</button>
-          </div>
-        {/if}
       </section>
     {/each}
   </div>
@@ -354,9 +358,6 @@
     font-size: 12.5px;
     color: var(--muted);
     text-align: right;
-  }
-  .foot {
-    margin: -6px 0 -8px -10px;
   }
   @media (max-width: 480px) {
     .cv {
