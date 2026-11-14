@@ -8,7 +8,6 @@ import { addDays } from '../lib/mission';
 import { catalogCondition, catalogTitle, isUrl, sourceLabel } from '../lib/rules';
 import { refresh, useApp } from '../lib/state';
 import { SCENARIO_IDS, type AppError, type ScenarioId, type ScenarioInfo, type Settings } from '../lib/types';
-import { Back } from '../ui/Back';
 import { Field, Stepper } from '../ui/form';
 import { Banner, Btn, Card, Icon, LevelBadge, Loading, Row, Screen, T, Well } from '../ui/kit';
 import { C, F } from '../ui/theme';
@@ -58,8 +57,7 @@ export default function SettingsScreen() {
   const days = Math.round((Date.parse(app.day.mission.today) - Date.parse(draft.launch_date)) / 86400000);
 
   return (
-    <Screen title="Settings">
-      <Back />
+    <Screen back title="Settings">
       <Banner tone="warn" text="Prototype, not a medical device. The rules marked as a design selection need a medical review." />
       <Card>
         <T v="h2">Mission</T>

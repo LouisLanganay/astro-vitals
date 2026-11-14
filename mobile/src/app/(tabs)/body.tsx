@@ -50,7 +50,7 @@ export default function Body() {
   const levels: Partial<Record<BodyRegion, Level>> = {};
   a.regions.forEach((r) => (levels[r.region] = r.level));
   const rs = a.regions.find((r) => r.region === region)!;
-  const figW = Math.min(width - 64, 300);
+  const figW = Math.min(width - 64, 210);
 
   function pick(z: BodyRegion) {
     setRegion(z);

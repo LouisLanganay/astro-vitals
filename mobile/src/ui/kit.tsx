@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -138,7 +139,26 @@ export function Seg<K extends string>({ items, value, onChange }: { items: { key
   );
 }
 
-export function Screen({ children, title, eyebrow }: { children: ReactNode; title?: string; eyebrow?: string }) {
+export function Back({ label = 'Back' }: { label?: string }) {
+  return (
+    <Pressable
+      onPress={() => (router.canGoBack() ? router.back() : router.replace('/more'))}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={12}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 4 }}
+    >
+      <View style={{ transform: [{ rotate: '180deg' }] }}>
+        <Icon name="chevron" size={16} color={C.muted} />
+      </View>
+      <T v="small" color={C.muted} style={{ fontFamily: F.medium }}>
+        {label}
+      </T>
+    </Pressable>
+  );
+}
+
+export function Screen({ children, title, eyebrow, back = false }: { children: ReactNode; title?: string; eyebrow?: string; back?: boolean }) {
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
@@ -146,6 +166,7 @@ export function Screen({ children, title, eyebrow }: { children: ReactNode; titl
       contentContainerStyle={{ paddingTop: insets.top + 14, paddingHorizontal: 16, paddingBottom: 32, gap: 14 }}
       keyboardShouldPersistTaps="handled"
     >
+      {back ? <Back /> : null}
       {title ? (
         <View style={{ gap: 4, marginBottom: 4 }}>
           {eyebrow ? <T v="label">{eyebrow}</T> : null}

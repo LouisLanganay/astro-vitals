@@ -102,7 +102,7 @@ export function Stepper({ value, text, steps, onChange, label }: { value: number
         <RoundBtn key={`d${s}`} label={`-${s}`} a11y={`${label}: minus ${s}`} onPress={() => onChange(value - s)} />
       ))}
       <View style={{ flex: 1, alignItems: 'center' }}>
-        <T numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: F.monoMedium, fontSize: 20, lineHeight: 26 }} accessibilityLabel={`${label}: ${text}`}>
+        <T numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: F.monoMedium, fontSize: text.length > 8 ? 15 : 20, lineHeight: 26 }} accessibilityLabel={`${label}: ${text}`}>
           {text}
         </T>
       </View>

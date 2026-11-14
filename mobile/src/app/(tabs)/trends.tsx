@@ -64,7 +64,7 @@ export default function Trends() {
                 Last: {lastPoint?.value != null ? formatValue(s.indicator, lastPoint.value) : 'no data'}
               </T>
               <T v="small" color={C.muted}>
-                Baseline: {s.baseline ? `${fmt(s.baseline.median, d)} ${info.unit}` : 'no baseline'}
+                Baseline: {s.baseline ? formatValue(s.indicator, s.baseline.median) : 'no baseline'}
               </T>
             </Row>
             <View style={{ marginHorizontal: -4 }}>
