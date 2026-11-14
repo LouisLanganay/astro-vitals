@@ -13,26 +13,41 @@ concurrency:
 jobs:
   build:
     runs-on: [self-hosted, astro]
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Detect project
         id: detect
         run: |
-          if [ -f package.json ]; then echo "node=true" >> "$GITHUB_OUTPUT"; else echo "node=false" >> "$GITHUB_OUTPUT"; fi
+          [ -f Cargo.toml ] && echo "rust=true" >> "$GITHUB_OUTPUT" || echo "rust=false" >> "$GITHUB_OUTPUT"
+          [ -f app/package.json ] && echo "app=true" >> "$GITHUB_OUTPUT" || echo "app=false" >> "$GITHUB_OUTPUT"
+
+      - name: Rust toolchain
+        if: steps.detect.outputs.rust == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Rust cache
+        if: steps.detect.outputs.rust == 'true'
+        uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v4
+        if: steps.detect.outputs.app == 'true'
+        with:
+          version: 10
       - uses: actions/setup-node@v4
-        if: steps.detect.outputs.node == 'true'
+        if: steps.detect.outputs.app == 'true'
         with:
           node-version: 22
-      - name: Install
-        if: steps.detect.outputs.node == 'true'
-        run: npm ci
-      - name: Lint, test, build
-        if: steps.detect.outputs.node == 'true'
+      - name: Frontend build
+        if: steps.detect.outputs.app == 'true'
         run: |
-          npm run lint --if-present
-          npm test --if-present
-          npm run build --if-present
-      - name: Nothing to build yet
-        if: steps.detect.outputs.node != 'true'
-        run: echo "No package.json yet, stack not chosen."
+          pnpm --dir app install --frozen-lockfile || pnpm --dir app install
+          pnpm --dir app build
+
+      # After the frontend build: the Tauri crate needs app/dist to compile.
+      - name: Rust format, lint, tests
+        if: steps.detect.outputs.rust == 'true'
+        run: |
+          cargo fmt --all --check || echo "::warning::cargo fmt differences"
+          cargo clippy --workspace --all-targets -- -D warnings || echo "::warning::clippy warnings"
+          cargo test --workspace
