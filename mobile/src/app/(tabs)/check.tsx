@@ -194,7 +194,7 @@ export default function Check() {
         {msg('red_flags') ? <T v="small" color={C.red}>{msg('red_flags')}</T> : null}
       </Card>
 
-      {error ? <Banner tone="error" text={error.kind === 'validation' ? `Correct the fields in red. ${errorText(error)}` : errorText(error)} /> : null}
+      {error ? <Banner tone="error" text={error.kind === 'validation' ? `Correct the fields in red: ${error.errors.length}.` : errorText(error)} /> : null}
       {saved ? <Banner text="Saved. The level of today is up to date." /> : null}
       <Btn kind="primary" icon="save" label={saving ? 'Saving...' : 'Save the check'} onPress={save} disabled={saving} />
       <Disclaimer />

@@ -1,6 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, View } from 'react-native';
+import { AppState, View } from 'react-native';
 
 import * as api from '../lib/api';
 import { errorText, toAppError } from '../lib/errors';
@@ -150,8 +150,10 @@ export default function Pvt() {
   if (phase === 'running') {
     const left = Math.max(0, Math.ceil((PVT_DURATION_MS - elapsed) / 1000));
     return (
-      <Pressable
-        onPressIn={input}
+      <View
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={input}
+        accessible
         accessibilityLabel="Test area. Tap when the circle shows."
         style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', gap: 28 }}
       >
@@ -180,7 +182,7 @@ export default function Pvt() {
         <View style={{ position: 'absolute', bottom: 40 }}>
           <Btn small kind="ghost" label="Stop the test" onPress={() => cancel('You stopped the test. It saved nothing.')} />
         </View>
-      </Pressable>
+      </View>
     );
   }
 
@@ -223,7 +225,7 @@ export default function Pvt() {
                 </T>
                 <LevelBadge state={stateOf(r.i)} />
               </Row>
-              <T style={{ fontFamily: F.monoMedium, fontSize: 26, lineHeight: 32 }}>{r.value}</T>
+              <T style={{ fontFamily: F.monoMedium, fontSize: r.value.length > 8 ? 18 : 26, lineHeight: 32 }}>{r.value}</T>
               <T v="small" color={C.faint}>
                 {r.help}
               </T>
