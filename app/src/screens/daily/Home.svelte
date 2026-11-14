@@ -28,7 +28,6 @@
   let seriesMap = $state.raw<Partial<Record<Indicator, Series>>>({});
   let strip = $state.raw<(Level | null)[]>([]);
 
-  // Load the series and the day level of each mission day again after each refresh.
   $effect(() => {
     void app.revision;
     const day = app.day;
@@ -82,7 +81,6 @@
     (assessment?.regions ?? []).filter((r) => FLAGGED.includes(r.level)),
   );
 
-  // Tasks of today.
   interface Task {
     key: string;
     icon: IconName;
@@ -161,7 +159,6 @@
   const fmt = (v: number, d: number) =>
     v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-  // Mission strip geometry.
   const STRIP_W = 600;
   const CELL = STRIP_W / (MISSION_DAYS + 1);
 </script>

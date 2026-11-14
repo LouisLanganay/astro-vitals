@@ -4,13 +4,11 @@ const KEY = 'astro-vitals-theme';
 
 export const theme = $state<{ value: Theme }>({ value: 'dark' });
 
-/** Dark by default. A saved choice wins. */
 export function initTheme() {
   let saved: string | null = null;
   try {
     saved = localStorage.getItem(KEY);
   } catch {
-    // Storage is optional.
   }
   setTheme(saved === 'light' ? 'light' : 'dark', false);
 }
@@ -22,7 +20,6 @@ export function setTheme(value: Theme, save = true) {
   try {
     localStorage.setItem(KEY, value);
   } catch {
-    // Storage is optional.
   }
 }
 

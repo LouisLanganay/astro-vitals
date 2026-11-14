@@ -1,8 +1,3 @@
-/**
- * Development mock of the Tauri commands, so the front renders in a normal browser.
- * main.ts loads it only in dev mode and outside Tauri: it is not in the production build.
- * The rules below are a small copy of rules/rules.toml, enough to show each level.
- */
 import { mockIPC } from '@tauri-apps/api/mocks';
 
 import { INDICATOR_INFO } from '../lib/labels';
@@ -42,7 +37,6 @@ import {
 const MISSION_DAYS = 120;
 const DEMO_DAY = 62;
 
-/* ---------- dates ---------- */
 const toDate = (iso: IsoDate) => new Date(`${iso}T00:00:00Z`);
 const toIso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (iso: IsoDate, n: number) => {
@@ -56,7 +50,6 @@ const localToday = () => {
   return toIso(new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())));
 };
 
-/* ---------- deterministic random ---------- */
 function rng(seed: number) {
   let a = seed >>> 0;
   return () => {
@@ -68,7 +61,6 @@ function rng(seed: number) {
   };
 }
 
-/* ---------- store ---------- */
 const TODAY = localToday();
 let doc: Document;
 
@@ -139,7 +131,6 @@ function generate(id: ScenarioId, todayDay: number): Document {
 
 doc = generate('sleep_debt', DEMO_DAY);
 
-/* ---------- values and baselines ---------- */
 function value(ind: Indicator, date: IsoDate): number | null {
   const a = doc.checks[date]?.answers;
   const p = doc.pvt[date];
@@ -217,7 +208,6 @@ function driftScore(ind: Indicator, date: IsoDate): number | null {
   return (m - b.median) / Math.max(1.4826 * b.mad, MIN_SCALE[ind] ?? 0.75);
 }
 
-/* ---------- rules: a subset of rules/rules.toml ---------- */
 const SRC = {
   sleep: 'https://doi.org/10.1093/sleep/zsac006',
   mars500: 'https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093298',
@@ -284,7 +274,6 @@ const RULES: Rule[] = [
 const rank = (l: Level) => LEVELS.indexOf(l);
 const maxLevel = (ls: Level[]): Level => ls.reduce<Level>((a, b) => (rank(b) > rank(a) ? b : a), 'ok');
 
-/** Returns [fires, value] or null when the rule has not enough data. */
 function check(rule: Rule, date: IsoDate): [boolean, number] | null {
   const low = INDICATOR_INFO[rule.ind].bad === 'low';
   if (rule.kind === 'absolute') {
@@ -355,7 +344,6 @@ function evaluate(date: IsoDate = TODAY): Assessment {
         body_region: rule.region, source: rule.source, subject: { type: 'indicator', value: rule.ind }, value: v });
     }
   }
-  // One indicator, two drift levels: the mock keeps the higher one only.
   const kept = fired.filter((f) => !fired.some((g) => g !== f && g.rule_id.includes('drift') && f.rule_id.includes('drift')
     && g.subject.value === f.subject.value && rank(g.level) > rank(f.level)));
   kept.push(...symptomRules(date));
@@ -394,7 +382,6 @@ function evaluate(date: IsoDate = TODAY): Assessment {
   };
 }
 
-/* ---------- day view ---------- */
 const complete = (date: IsoDate) => doc.checks[date]?.answers != null;
 
 function getDay(date: IsoDate = TODAY): DayView {
@@ -476,7 +463,6 @@ const SCENARIOS: Record<ScenarioId, Omit<ScenarioInfo, 'id' | 'mission_day'>> = 
   },
 };
 
-/* ---------- IPC ---------- */
 type Args = Record<string, unknown>;
 const delay = <T>(v: T) => new Promise<T>((r) => setTimeout(() => r(v), 60));
 

@@ -1,6 +1,5 @@
 import type { IndicatorState } from './types';
 
-/** Stroke icons in a 24 x 24 view box, from the mock-up. */
 export const ICON = {
   home:
     '<circle cx="12" cy="12" r="3.4"/><path d="M12 2.8v2.3M12 18.9v2.3M2.8 12h2.3M18.9 12h2.3M5.5 5.5l1.6 1.6M16.9 16.9l1.6 1.6M5.5 18.5l1.6-1.6M16.9 7.1l1.6-1.6"/>',
@@ -45,7 +44,6 @@ export const ICON = {
 
 export type IconName = keyof typeof ICON;
 
-/** Filled level shapes in a 12 x 12 view box: circle, triangle, diamond, square. */
 export const LEVEL_ICON: Record<IndicatorState, string> = {
   ok: '<circle cx="6" cy="6" r="5.5"/>',
   self_care: '<path d="M6 .6 11.7 11H.3Z"/>',

@@ -92,7 +92,6 @@
     }
   }
 
-  // Steps of the test, for the intro and for the progress during the test.
   const steps = $derived.by(() => {
     const flow = step === 'acuity' || step === 'amsler';
     const eyeText = `${EYES[eyeIndex]} eye`;

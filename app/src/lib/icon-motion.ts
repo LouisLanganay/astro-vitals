@@ -1,9 +1,3 @@
-// Plays the motion table of a @fynex/icons drawing with the Web Animations API.
-//
-// The source package animates with `motion` for React. Its tables use a small
-// grammar (round trips that end at rest, held turns, self-drawing paths), so a
-// tiny player is enough here: no React, no runtime dependency. At rest an icon
-// is a plain SVG; animations exist only while a gesture plays.
 
 export type Num = number | number[];
 
@@ -57,7 +51,6 @@ const list = (v: Num | undefined, n: number, rest: number): number[] => {
 
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** The props of a variant, grouped by the CSS property that plays them. */
 function channels(v: Variant): { css: string; props: string[] }[] {
   const has = (p: string) => v[p] !== undefined;
   const out: { css: string; props: string[] }[] = [];
@@ -124,7 +117,6 @@ function origin(el: SVGElement, def: IconDef, part: string) {
 
 const running = new WeakMap<SVGSVGElement, Animation[]>();
 
-/** Plays the gesture of the icon once. Held states stay until `release`. */
 export function play(svg: SVGSVGElement, def: IconDef) {
   if (reduced()) return;
   for (const a of running.get(svg) ?? []) a.cancel();
@@ -156,7 +148,6 @@ export function play(svg: SVGSVGElement, def: IconDef) {
   running.set(svg, anims);
 }
 
-/** Ends a held gesture (a turn): back to rest, short and without bounce. */
 export function release(svg: SVGSVGElement) {
   const anims = running.get(svg);
   if (!anims) return;
@@ -172,7 +163,6 @@ export function release(svg: SVGSVGElement) {
   }
 }
 
-/** The plain drawing has no motion table: a beat of scale, as `pulse()` in the source package. */
 export const BEAT: IconDef['motion'] = {
   group: { animate: { scale: [1, 1.12, 1], transition: { duration: 0.4, ease: 'easeInOut' } } },
 };

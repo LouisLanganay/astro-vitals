@@ -162,7 +162,6 @@
     display: grid;
     place-items: center;
   }
-  /* Only the opacity changes on a new letter: never its size. */
   .e {
     animation: e-in var(--t-fast) var(--ease-out);
   }

@@ -12,12 +12,6 @@
     type Side,
   } from './bodyShape';
 
-  /**
-   * Dot matrix body figure, front and back. A region takes its level colour only when it is
-   * flagged. With `onpick`, each region is a button. Pins with the name and the level of the
-   * flagged and selected regions show when `labels` is on, or with 'auto' when the figure is
-   * at least 470 px wide.
-   */
   let {
     levels,
     selected = null,
@@ -73,7 +67,6 @@
       : [],
   );
 
-  // A region that becomes flagged after the first paint glows and pulses once.
   let previous: Partial<Record<BodyRegion, IndicatorState>> | null = null;
   $effect(() => {
     const now = { ...levels };
@@ -213,7 +206,6 @@
     stroke: var(--dot);
     stroke-linecap: round;
     transition: stroke var(--t-mid) var(--ease-out);
-    /* Fade in from the core of the body outwards: core regions first, inner dots first. */
     animation: dot-in 240ms var(--ease-out) backwards;
     animation-delay: calc(var(--r, 0) * 30ms + var(--k, 0) * 60ms);
   }

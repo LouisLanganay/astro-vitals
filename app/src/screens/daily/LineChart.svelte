@@ -1,11 +1,6 @@
 <script lang="ts">
   import type { IndicatorState, Level, SeriesPoint } from '../../lib/types';
 
-  /**
-   * Trend chart: daily bars, 7-day mean line, dashed baseline median, dotted rule thresholds,
-   * a shaded pre-flight zone and an endpoint dot in the level colour.
-   * Weekly indicators show as dots and a thin line, with no bars and no mean.
-   */
   let {
     points,
     baseline,
@@ -23,7 +18,6 @@
     weekly?: boolean;
     thresholds?: { value: number; level: Level }[];
     minSpan?: number;
-    /** Last mission day of the x axis, when it goes past the data. */
     until?: number | null;
   } = $props();
 
@@ -79,7 +73,6 @@
       for (const p of points) {
         const v = p[key];
         if (v === null) {
-          // Weekly values skip the empty days. Daily means break at a gap.
           if (!weekly) pen = false;
           continue;
         }
@@ -211,7 +204,6 @@
   .pre {
     fill: var(--well);
   }
-  /* Bars grow from the baseline, left to right, with a short stagger. */
   .bars rect {
     transform-box: fill-box;
     transform-origin: 50% 100%;

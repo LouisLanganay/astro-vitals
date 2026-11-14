@@ -4,7 +4,6 @@
   import type { BodyRegion, IndicatorState } from '../../lib/types';
   import DotFigure from './DotFigure.svelte';
 
-  /** Small dot figure with no labels, next to a list given as children. For the Home card. */
   let {
     levels,
     children,

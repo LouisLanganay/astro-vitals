@@ -106,7 +106,6 @@
 </section>
 
 <style>
-  /* The grid keeps its exact size in mm: the area scrolls instead of shrinking it. */
   .area {
     overflow: auto;
     max-width: 100%;
@@ -137,7 +136,6 @@
   .cell:disabled {
     cursor: default;
   }
-  /* The mark scales in and out inside the cell. The cell and the lines never move. */
   .cell::after {
     content: '';
     position: absolute;

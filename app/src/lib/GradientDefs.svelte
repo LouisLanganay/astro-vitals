@@ -1,5 +1,4 @@
 <script lang="ts">
-  // Gradients and the glow filter shared by every chart. Mounted once in App.
 </script>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">

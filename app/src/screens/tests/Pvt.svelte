@@ -171,8 +171,6 @@
 
   onDestroy(clear);
 
-  // Display only, outside the measurement: a counter that runs while the signal shows. It
-  // reads stimulusAt and never writes any value that the test records.
   const BAR_DAYS = 10;
   let live = $state(0);
   let history = $state.raw<Series | null>(null);
@@ -196,7 +194,6 @@
     lit ? 'Press now' : feedback === 'Too early' ? 'False start. Wait for the signal.' : feedback === 'No input' ? 'No input: a lapse.' : 'Wait for the signal.',
   );
 
-  // Mean reaction time of the last 10 days, read again after each refresh.
   $effect(() => {
     void app.revision;
     let stale = false;
@@ -215,7 +212,6 @@
   const rtState = $derived(stateOf('pvt_mean_rt_ms') ?? 'not_enough_data');
   const secondsLeft = $derived(Math.max(0, Math.ceil((PVT_DURATION_MS - elapsedMs) / 1000)));
 </script>
-
 
 <svelte:window onkeydown={key} onblur={() => cancel('The window lost focus.')} />
 <svelte:document
@@ -405,7 +401,6 @@
     min-height: max(280px, 50vh);
     cursor: pointer;
   }
-  /* The signal shows at once: no transition on the stage, the counter or the message. */
   .stage.live.lit {
     box-shadow: inset 0 0 0 2px var(--ui);
   }
@@ -416,7 +411,6 @@
     letter-spacing: -0.055em;
     font-variant-numeric: tabular-nums;
   }
-  /* Scale only, never opacity: the counter is fully visible on its first frame. */
   .count.on {
     animation: stim-pop var(--t-fast) var(--ease-out);
   }

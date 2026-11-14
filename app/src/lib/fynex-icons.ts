@@ -1,6 +1,5 @@
-// Generated from @fynex/icons 0.2.0 (MIT, The Fynex authors, https://icons.fynexapp.com),
-// drawn on the lucide grid (ISC). Each entry keeps the drawing and the default motion table
-// of the source icon; icon-motion.ts plays the table with the Web Animations API.
+// Generated from @fynex/icons 0.2.0 (MIT, The Fynex authors, https://icons.fynexapp.com).
+// The drawings use the lucide grid (ISC).
 
 import type { IconDef } from "./icon-motion";
 

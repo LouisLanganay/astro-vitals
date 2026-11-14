@@ -1,11 +1,6 @@
 <script lang="ts">
   import type { IndicatorState } from './types';
 
-  /**
-   * Small bar chart of the last days. Grey bars fade into the card, the last bar with a value
-   * is lit: in the level colour when its state is flagged, in the accent colour when not.
-   * A dashed line marks the baseline median.
-   */
   let {
     values,
     baseline = null,

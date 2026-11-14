@@ -48,7 +48,6 @@
   const progress = $derived(day == null ? 0 : Math.max(0, Math.min(1, day / MISSION_DAYS)));
   const checkDue = $derived(app.day?.mission.due.some((t) => t.kind === 'daily_check') ?? false);
 
-  // Active pill that slides between the navigation items.
   let navEl = $state<HTMLElement>();
   let pill = $state({ x: 0, y: 0, w: 0, h: 0, ready: false });
 

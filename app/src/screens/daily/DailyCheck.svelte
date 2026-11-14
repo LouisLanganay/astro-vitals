@@ -121,7 +121,6 @@
   let savedOk = $state(false);
   let error = $state<AppError | null>(null);
 
-  // The time boxes hold free text. A text that is not a 24-hour time counts as empty.
   let startText = $state('');
   let endText = $state('');
   const sleepStart = $derived(clockText(startText));
@@ -142,7 +141,6 @@
   let symptoms = $state<Symptom[]>([]);
   let redFlags = $state<RedFlagKind[]>([]);
 
-  // The new symptom, before it goes in the list.
   let draft = $state<Symptom>(newSymptom());
 
   const sleepHours = $derived(
@@ -232,7 +230,6 @@
     return `${SEVERITY_SHORT[s.severity - 1] ?? s.severity}, ${REGION_LABEL[s.region].toLowerCase()}, ${treated}`;
   }
 
-  // Steppers: plus and minus, kept inside the range, with a short tick on the number.
   function step(def: (typeof NUMBERS)[number], dir: 1 | -1, el: HTMLElement | null) {
     const now = numbers[def.key] ?? 0;
     const next = Math.min(def.max, Math.max(0, now + dir * def.inc));
@@ -292,7 +289,6 @@
       await refresh();
       savedOk = true;
       saving = false;
-      // A short success state on the button, then back to Today.
       await new Promise((r) => setTimeout(r, prefersReducedMotion.current ? 0 : 520));
       navigate('home');
     } catch (e) {
@@ -736,7 +732,6 @@
     white-space: nowrap;
   }
 
-  /* 0 to 10 pills */
   .scales {
     display: flex;
     flex-direction: column;
@@ -781,7 +776,6 @@
   .rate label:active {
     transform: scale(0.94);
   }
-  /* The lower pills tint in a quick cascade, from 0 up to the choice. */
   .rate label.lo {
     color: var(--fg);
     background: color-mix(in srgb, var(--ui) 16%, var(--well));
@@ -821,7 +815,6 @@
     box-shadow: none !important;
   }
 
-  /* time boxes */
   .times {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -882,7 +875,6 @@
     margin: 0;
   }
 
-  /* steppers */
   .steps3 {
     display: grid;
     gap: 10px;
@@ -962,7 +954,6 @@
     transform: scale(0.94);
   }
 
-  /* toggles */
   .tog {
     display: flex;
     align-items: center;
@@ -1028,7 +1019,6 @@
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   }
 
-  /* symptoms */
   .syms {
     display: flex;
     flex-direction: column;
@@ -1100,7 +1090,6 @@
     color: var(--muted);
   }
 
-  /* save bar */
   .savebar {
     display: flex;
     flex-wrap: wrap;

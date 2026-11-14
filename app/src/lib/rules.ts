@@ -19,7 +19,6 @@ const INDICATOR_TITLE: Record<Indicator, string> = {
   amsler_right: 'Distortion on the Amsler grid, right eye',
 };
 
-/** Short title of a fired rule. The rule file has no title, so it comes from the subject. */
 export function ruleTitle(rule: FiredRule): string {
   const s = rule.subject;
   switch (s.type) {
@@ -46,7 +45,6 @@ export function round(value: number, decimals: number): string {
   });
 }
 
-/** The measured fact behind a rule, in plain words, or null when the rule has no value. */
 export function ruleFact(rule: FiredRule): string | null {
   if (rule.value == null) return null;
   const s = rule.subject;
@@ -59,7 +57,6 @@ export function ruleFact(rule: FiredRule): string | null {
   return `mean ${formatValue(s.value, rule.value)}`;
 }
 
-/** Host name of a source URL, for the link text. */
 export function sourceLabel(source: string): string {
   try {
     return new URL(source).hostname.replace(/^www\./, '');

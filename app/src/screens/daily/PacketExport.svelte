@@ -71,7 +71,6 @@
     return symptom.improved ? 'treated, improved' : 'treated, not improved';
   }
 
-  // The file is compact JSON. The preview shows the same data with indentation.
   const pretty = $derived.by(() => {
     if (!preview) return [];
     try {

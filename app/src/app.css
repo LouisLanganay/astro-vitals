@@ -1,7 +1,6 @@
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
 
-/* Design tokens, copied from the validated mock-up. Dark first, light on request. */
 :root {
   color-scheme: dark;
   --bg: #000000;
@@ -60,7 +59,6 @@
   --glass: rgba(255, 255, 255, .86); --shadow: 0 12px 40px rgba(20, 20, 40, .14);
 }
 
-/* Motion tokens. Fast, ease-out by default, a spring-like overshoot for pops. */
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
@@ -70,7 +68,6 @@
   --t-slow: 300ms;
 }
 
-/* Level colour: any element with data-lv gets --lc. */
 [data-lv='ok'] { --lc: var(--green); }
 [data-lv='self_care'] { --lc: var(--yellow); }
 [data-lv='tell_cmo'] { --lc: var(--orange); }
@@ -115,7 +112,6 @@ a:hover { text-decoration-color: var(--fg); }
 section { display: grid; gap: 16px; align-content: start; min-width: 0; }
 code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-2); padding: 2px 6px; border-radius: 6px; overflow-wrap: anywhere; }
 
-/* ---------- text helpers ---------- */
 .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
 .eyebrow { font-size: 13px; color: var(--muted); }
 .lbl { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
@@ -127,7 +123,6 @@ code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-
 .big { font-size: 44px; font-weight: 500; letter-spacing: -0.05em; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .big small { font-size: 16px; font-weight: 400; letter-spacing: -0.01em; color: var(--muted); margin-left: 6px; }
 
-/* ---------- layout ---------- */
 .grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
 @media (min-width: 900px) {
   .g-7-5 { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
@@ -136,7 +131,6 @@ code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-
   .g-stretch { align-items: stretch; }
 }
 
-/* ---------- cards ---------- */
 .card {
   position: relative;
   display: flex;
@@ -154,7 +148,6 @@ code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-
 .ttl { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .well { padding: 14px 16px; border-radius: 18px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
 
-/* raised square that holds an icon */
 .ic {
   width: 34px; height: 34px; border-radius: 11px; display: inline-grid; place-items: center; flex: none; color: var(--fg);
   background: linear-gradient(180deg, var(--raise-a), var(--raise-b)); box-shadow: inset 0 1px 0 var(--hi), 0 0 0 1px var(--line);
@@ -166,7 +159,6 @@ code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-
 .ic.st-due { color: var(--ui); }
 .ic.st-opt { color: var(--muted); }
 
-/* ---------- chips ---------- */
 .chip {
   display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 9px; font-weight: 500; font-size: 12.5px; line-height: 1.2;
   white-space: nowrap; color: var(--lc, var(--muted)); background: color-mix(in srgb, var(--lc, var(--muted)) 13%, transparent);
@@ -178,7 +170,6 @@ code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-
 .chip.lg .lvicon { width: 9px; height: 9px; }
 .lvicon { fill: currentColor; flex: none; }
 
-/* ---------- buttons ---------- */
 .btn {
   appearance: none; border: 0; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px;
   padding: 9px 18px; border-radius: 999px; font-weight: 500; font-size: 14px; white-space: nowrap; text-decoration: none; color: var(--fg);
@@ -200,7 +191,6 @@ code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-
 .btn svg { width: 16px; height: 16px; flex: none; }
 .btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
-/* ---------- segmented control ---------- */
 .seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 14px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
 .seg button {
   border: 0; background: transparent; color: var(--muted); font-weight: 500; font-size: 13.5px; padding: 6px 14px; min-height: 34px;
@@ -213,7 +203,6 @@ code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-
   box-shadow: inset 0 1px 0 var(--hi), 0 1px 3px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--line);
 }
 
-/* ---------- inputs ---------- */
 input:not([type='range']):not([type='checkbox']):not([type='radio']),
 select,
 textarea {
@@ -228,14 +217,12 @@ input:focus,
 select:focus,
 textarea:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--ui); }
 input[type='radio'] { accent-color: var(--ui); width: 18px; height: 18px; }
-/* Checkbox: the box fills, the tick springs in, the press gives way a little. */
 input[type='checkbox'] {
   appearance: none; -webkit-appearance: none; flex: none; display: inline-grid; place-content: center; margin: 0;
   width: 18px; height: 18px; border-radius: 6px; cursor: pointer;
   background: var(--well-2); box-shadow: inset 0 0 0 1.5px var(--line-2);
   transition: background-color var(--t-mid) var(--ease-out), box-shadow var(--t-mid) var(--ease-out), transform var(--t-fast) var(--ease-out);
 }
-/* Same tick as the toggles of the daily check, so a screen style that redraws it stays consistent. */
 input[type='checkbox']::after {
   content: ''; width: 10px; height: 5px; border: solid var(--on-ui); border-width: 0 0 2px 2px; opacity: 0;
   transform: translateY(-1px) rotate(-45deg) scale(0.3);
@@ -264,7 +251,6 @@ input[type='range']::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
 .field .error,
 .err { color: var(--red); font-size: 12.5px; }
 
-/* ---------- banners and notices ---------- */
 .banner,
 .notice {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
@@ -277,7 +263,6 @@ input[type='range']::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
 .banner.warn { --c: var(--orange); }
 .banner.error { --c: var(--red); }
 
-/* ---------- motion ---------- */
 @keyframes pop-in {
   from { opacity: 0; transform: scale(0.88); }
   to { opacity: 1; transform: none; }

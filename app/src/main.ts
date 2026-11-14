@@ -7,7 +7,6 @@ import './app.css';
 initTheme();
 
 async function start() {
-  // In a normal browser during development, answer the Tauri commands with mock data.
   if (import.meta.env.DEV && !('__TAURI_INTERNALS__' in window)) {
     await import('./dev/mock');
   }

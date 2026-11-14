@@ -70,7 +70,6 @@
 </section>
 
 <style>
-  /* The rectangle keeps its exact width in px: the area scrolls instead of shrinking it. */
   .area {
     overflow-x: auto;
     padding: 4px 0;

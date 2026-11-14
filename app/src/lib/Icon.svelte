@@ -5,7 +5,6 @@
   import { BEAT, play, release, type IconDef, type Shape } from './icon-motion';
   import { ICON, type IconName } from './icons';
 
-  // `active` plays the gesture each time it turns true (a tab that becomes the current one).
   let { name, size = 18, active = false }: { name: IconName; size?: number; active?: boolean } = $props();
 
   let svg: SVGSVGElement | undefined = $state();
@@ -23,7 +22,6 @@
 
   onMount(() => {
     if (!svg) return;
-    // The icon plays when its clickable parent is hovered, as `useIconTrigger` in the source package.
     const host = svg.closest<HTMLElement>('a, button, label, summary, [role="button"], [data-icon-trigger]') ?? svg;
     host.addEventListener('pointerenter', go);
     host.addEventListener('pointerleave', stop);
@@ -65,7 +63,6 @@
     stroke-linejoin: round;
     overflow: visible;
   }
-  /* The @fynex/icons drawings are made for a stroke of 2 on the 24 grid. */
   .icon.fx {
     stroke-width: 1.9;
   }

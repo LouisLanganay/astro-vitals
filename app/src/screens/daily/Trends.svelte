@@ -46,7 +46,6 @@
     amsler_right: 'eye',
   };
 
-  // Smallest vertical span of a chart, so that a flat series does not look noisy.
   const MIN_SPAN: Record<string, number> = { h: 2, '0-10': 3, L: 1, min: 30, ms: 40, count: 3, logMAR: 0.3, '0-1': 1 };
 
   let range = $state<Range>('all');
@@ -71,7 +70,6 @@
     }
   });
 
-  // The exercise threshold is the prescription from the settings.
   $effect(() => {
     void app.revision;
     getSettings().then(

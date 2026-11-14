@@ -6,10 +6,6 @@
 
   import type { FiredRule } from './types';
 
-  /**
-   * One fired rule: level, title, the action, the measured fact, why, and the source.
-   * `index` staggers the entrance. `children` adds buttons at the bottom.
-   */
   let {
     rule,
     index = 0,

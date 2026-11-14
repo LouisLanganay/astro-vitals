@@ -1,11 +1,5 @@
 import type { BodyRegion } from '../../lib/types';
 
-/**
- * Geometry of the dot matrix body figure, ported from the mock-up. One silhouette of
- * 200 x 452 units, drawn twice: front and back. The first shape that holds a point gives
- * its region, so the order of BODY is the priority.
- */
-
 export type Side = 'front' | 'back';
 
 export type Shape =
@@ -44,15 +38,12 @@ export const BODY: Part[] = [
   [c(124, 432, 136, 438, 8), 'feet', 'feet'],
 ];
 
-/** Higher priority is drawn last, on top. */
 export const DRAW_ORDER: BodyRegion[] = ['feet', 'legs', 'hands', 'arms', 'abdomen', 'back', 'chest', 'neck', 'head', 'eyes'];
 
-/** Distance of each region from the core of the body, for the entrance stagger. */
 export const CORE_RANK: Record<BodyRegion, number> = {
   chest: 0, back: 0, abdomen: 1, neck: 1, arms: 2, head: 2, eyes: 3, hands: 3, legs: 3, feet: 4,
 };
 
-/** Label pins: anchor x and y on the figure, label row on the side column. */
 export const PIN: Record<BodyRegion, [number, number, number]> = {
   head: [82, 24, 20], eyes: [84, 44, 60], neck: [94, 84, 100], chest: [76, 134, 140], arms: [40, 168, 182],
   abdomen: [80, 214, 226], hands: [27, 266, 276], legs: [80, 330, 336], feet: [68, 436, 420], back: [100, 180, 180],
@@ -96,7 +87,6 @@ export function regionAt(x: number, y: number, side: Side): BodyRegion | null {
   return null;
 }
 
-/** Shapes of a region on one side, used as hit areas. */
 export const shapesOf = (z: BodyRegion, side: Side): Shape[] =>
   BODY.filter((b) => (side === 'front' ? b[1] : b[2]) === z).map((b) => b[0]);
 
@@ -104,7 +94,6 @@ export type DotPaths = Partial<Record<BodyRegion, [string, string, string]>>;
 
 const cache: Partial<Record<Side, DotPaths>> = {};
 
-/** Region to 3 path strings, from the edge (dim, bucket 0) to the core (bright, bucket 2). */
 export function figDots(side: Side): DotPaths {
   const hit = cache[side];
   if (hit) return hit;

@@ -1,4 +1,3 @@
-/** One piece of JSON text, with its colour class: k key, s string, n number, b true, false or null. */
 export interface Token {
   t: string;
   c: '' | 'k' | 's' | 'n' | 'b';
@@ -6,7 +5,6 @@ export interface Token {
 
 const RE = /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false|null)\b/g;
 
-/** Split JSON text into tokens for syntax colours. The text is never parsed as HTML. */
 export function tokens(text: string): Token[] {
   const out: Token[] = [];
   let i = 0;

@@ -3,7 +3,6 @@
   import LevelIcon from './LevelIcon.svelte';
   import type { IndicatorState } from './types';
 
-  /** Level chip. `size="lg"` for the page header. It pops in again when the level changes. */
   let { state, size = 'md' }: { state: IndicatorState; size?: 'md' | 'lg' } = $props();
 </script>
 

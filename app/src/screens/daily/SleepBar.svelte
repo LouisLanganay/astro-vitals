@@ -5,7 +5,6 @@
   import { timeToMin } from '../../lib/format';
   import { MINUTES_PER_DAY } from '../../lib/types';
 
-  /** Sleep window on a scale from 18:00 to 12:00 the next day. Times are "HH:MM" or empty. */
   let { start, end }: { start: string; end: string } = $props();
 
   const W = 420;

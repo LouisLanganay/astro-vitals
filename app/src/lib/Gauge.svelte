@@ -2,7 +2,6 @@
   import { STATE_LABEL } from './labels';
   import { LEVELS, type IndicatorState } from './types';
 
-  /** 270 degree gauge with one arc per level. The current arc is lit and glows. */
   let { state: level, width = 168 }: { state: IndicatorState; width?: number } = $props();
 
   const R = 54;

@@ -52,7 +52,6 @@
       : [],
   );
 
-  // Symptoms of the last 14 days, read again after each refresh. Today comes first.
   $effect(() => {
     void app.revision;
     const today = app.day?.mission.today;
@@ -89,7 +88,6 @@
     error = null;
     notice = '';
     navigate('body', { region });
-    // On a narrow screen the panel is under the figure: bring it into view.
     if (region) {
       tick().then(() => {
         const head = document.getElementById('b-p');
