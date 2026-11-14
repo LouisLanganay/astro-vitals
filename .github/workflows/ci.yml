@@ -1,0 +1,38 @@
+name: CI
+
+# Self-hosted runner on Louis's Mac: only pushes from collaborators, never fork PRs.
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: [self-hosted, astro]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect project
+        id: detect
+        run: |
+          if [ -f package.json ]; then echo "node=true" >> "$GITHUB_OUTPUT"; else echo "node=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.node == 'true'
+        with:
+          node-version: 22
+      - name: Install
+        if: steps.detect.outputs.node == 'true'
+        run: npm ci
+      - name: Lint, test, build
+        if: steps.detect.outputs.node == 'true'
+        run: |
+          npm run lint --if-present
+          npm test --if-present
+          npm run build --if-present
+      - name: Nothing to build yet
+        if: steps.detect.outputs.node != 'true'
+        run: echo "No package.json yet, stack not chosen."
