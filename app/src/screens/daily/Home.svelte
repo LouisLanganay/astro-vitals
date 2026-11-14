@@ -60,14 +60,14 @@
       ? 'No data yet. Do the daily check to start.'
       : top
         ? top.action
-        : 'No rule fired today. No action needed.',
+        : 'No rule fired. No action needed.',
   );
   const why = $derived.by(() => {
     if (top) {
       const fact = ruleFact(top);
       return fact ? `${ruleTitle(top)}: ${fact}.` : `${ruleTitle(top)}.`;
     }
-    return noData ? '' : 'Each rule is under its limit and you are close to your pre-flight baseline.';
+    return '';
   });
   const missing = $derived(
     noData
