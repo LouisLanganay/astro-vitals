@@ -676,7 +676,8 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
   const observer = new ResizeObserver(() => {
     width = Math.max(1, canvas.clientWidth);
     height = Math.max(1, canvas.clientHeight);
-    painter?.resize(width, height, Math.min(window.devicePixelRatio || 1, 2));
+    const scale = (window.devicePixelRatio || 1) * (window.visualViewport?.scale ?? 1);
+    painter?.resize(width, height, Math.min(scale, 2.5));
     fit();
     paint();
   });
