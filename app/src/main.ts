@@ -7,7 +7,9 @@ import './app.css';
 initTheme();
 
 async function start() {
-  if (import.meta.env.DEV && !('__TAURI_INTERNALS__' in window)) {
+  if (import.meta.env.MODE === 'web') {
+    await (await import('./web/start')).startWeb();
+  } else if (import.meta.env.DEV && !('__TAURI_INTERNALS__' in window)) {
     await import('./dev/mock');
   }
   return mount(App, { target: document.getElementById('app')! });
