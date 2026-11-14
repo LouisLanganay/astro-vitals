@@ -62,7 +62,7 @@ async function run(command: string, args: unknown): Promise<unknown> {
     doc,
     corrupt_backup: corruptBackup,
   });
-  if (response.corrupt) keepCorrupt(JSON.stringify(doc));
+  if (response.corrupt && doc !== null) keepCorrupt(JSON.stringify(doc));
   if (response.doc !== undefined) {
     memory = JSON.stringify(response.doc);
     write(DOC_KEY, memory);
