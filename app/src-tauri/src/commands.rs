@@ -213,7 +213,7 @@ mod tests {
     use super::*;
     use crate::store::DATA_FILE;
     use crate::store::tests::{names, temp_dir};
-    use astro_vitals_core::model::{Calibration, EyeResult, Level, RedFlagKind};
+    use astro_vitals_core::model::{Calibration, DailyAnswers, EyeResult, Level};
     use std::fs;
 
     fn day(s: &str) -> NaiveDate {
@@ -228,6 +228,105 @@ mod tests {
                 message: "no source".into(),
             }),
         }
+    }
+
+    fn ready(dir: &Path, today: NaiveDate) -> AppState {
+        AppState {
+            rules: rules::parse(RULES_TOML),
+            ..state(dir, today)
+        }
+    }
+
+    #[test]
+    fn scenario_flow_with_the_embedded_rules() {
+        let dir = temp_dir("flow");
+        let today = day("2026-11-14");
+        let state = ready(&dir, today);
+        assert_eq!(state.rules.as_ref().err(), None);
+
+        let info = state.load_scenario(ScenarioId::SleepDebt, today).unwrap();
+        let view = state.get_day(None, today).unwrap();
+        assert_eq!(view.date, today);
+        assert_eq!(view.mission_day, info.mission_day);
+        assert_eq!(view.mission.mission_day, info.mission_day);
+
+        let expected = info
+            .expected
+            .iter()
+            .filter(|e| e.first_mission_day <= view.mission_day)
+            .max_by_key(|e| e.first_mission_day)
+            .unwrap();
+        let assessment = state.evaluate(None, today).unwrap();
+        assert_eq!(assessment.date, today);
+        assert_eq!(assessment.level, expected.level);
+
+        let series = state.series(Indicator::SleepHours, today).unwrap();
+        assert_eq!(series.indicator, Indicator::SleepHours);
+        assert!(series.baseline.is_some());
+        assert_eq!(series.points.last().unwrap().date, today);
+        assert!(series.points.iter().any(|p| p.value.is_some()));
+
+        let preview = state.export_packet(None, today).unwrap();
+        assert_eq!(preview.path, None);
+        assert_eq!(preview.bytes as usize, preview.json.len());
+        assert!(preview.bytes as usize <= packet::MAX_BYTES);
+        assert_eq!(preview.packet.level, assessment.level);
+        assert_eq!(names(&dir), [DATA_FILE]);
+
+        let file = dir.join("packet.json").display().to_string();
+        let written = state.export_packet(Some(file.clone()), today).unwrap();
+        assert_eq!(written.path, Some(file.clone()));
+        assert_eq!(written.json, preview.json);
+        assert_eq!(fs::read_to_string(&file).unwrap(), written.json);
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn daily_check_is_validated_then_saved() {
+        let dir = temp_dir("daily");
+        let today = day("2026-11-14");
+        let state = ready(&dir, today);
+        let check = |mood: u8| DailyCheck {
+            answers: Some(DailyAnswers {
+                sleep_start_min: 1380,
+                sleep_end_min: 420,
+                sleep_quality: 7,
+                sleep_aid: false,
+                mood,
+                stress: 2,
+                tiredness: 3,
+                workload: 5,
+                fluid_l: 3.0,
+                exercise_resistive_min: 45,
+                exercise_aerobic_min: 45,
+            }),
+            ..DailyCheck::empty(today)
+        };
+
+        let Err(AppError::Validation { errors }) = state.save_daily_check(check(11), today) else {
+            panic!("a scale above 10 must give a validation error");
+        };
+        let fields: Vec<&str> = errors.iter().map(|e| e.field.as_str()).collect();
+        assert_eq!(fields, ["answers.mood"]);
+        assert!(names(&dir).is_empty());
+        assert_eq!(
+            state.get_day(None, today).unwrap().check,
+            DailyCheck::empty(today)
+        );
+
+        state.save_daily_check(check(6), today).unwrap();
+        let stored = Store::open(&dir, today).unwrap();
+        assert_eq!(stored.doc().checks[&today], check(6));
+
+        state.save_daily_check(check(4), today).unwrap();
+        let stored = Store::open(&dir, today).unwrap();
+        assert_eq!(stored.doc().checks.len(), 1);
+        assert_eq!(stored.doc().checks[&today], check(4));
+        let view = state.get_day(None, today).unwrap();
+        assert_eq!(view.check, check(4));
+        assert_eq!(view.mission.streak, 1);
+        assert_eq!(names(&dir), [DATA_FILE]);
+        fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
@@ -273,30 +372,6 @@ mod tests {
             assert_eq!(error, Some(expected.clone()));
         }
         assert!(names(&dir).is_empty());
-        fs::remove_dir_all(&dir).unwrap();
-    }
-
-    #[test]
-    fn second_save_for_a_day_replaces_the_first() {
-        let dir = temp_dir("second-save");
-        let today = day("2026-11-14");
-        let state = state(&dir, today);
-        let mut check = DailyCheck::empty(today);
-        state
-            .update(|doc| {
-                doc.checks.insert(today, check.clone());
-            })
-            .unwrap();
-        check.red_flags.push(RedFlagKind::Fever);
-        state
-            .update(|doc| {
-                doc.checks.insert(today, check.clone());
-            })
-            .unwrap();
-        let store = Store::open(&dir, today).unwrap();
-        assert_eq!(store.doc().checks.len(), 1);
-        assert_eq!(store.doc().checks[&today], check);
-        assert_eq!(names(&dir), [DATA_FILE]);
         fs::remove_dir_all(&dir).unwrap();
     }
 
