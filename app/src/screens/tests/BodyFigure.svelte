@@ -4,7 +4,7 @@
   import { getDay, saveDailyCheck } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
   import FiredRuleCard from '../../lib/FiredRuleCard.svelte';
-  import { missionDayLabel } from '../../lib/format';
+  import Icon from '../../lib/Icon.svelte';
   import { INDICATOR_INFO, REGION_LABEL, STATE_LABEL, SYMPTOM_LABEL } from '../../lib/labels';
   import LevelBadge from '../../lib/LevelBadge.svelte';
   import LevelIcon from '../../lib/LevelIcon.svelte';
@@ -45,7 +45,6 @@
   const regions = $derived(app.assessment?.regions ?? []);
   const selected = $derived(regions.find((r) => r.region === app.route.region) ?? null);
   const levels = $derived(Object.fromEntries(regions.map((r) => [r.region, r.level])));
-  const flagged = $derived(regions.filter((r) => FLAGGED.includes(r.level)).length);
   const counts = $derived(
     Object.fromEntries(LEVELS.map((l) => [l, regions.filter((r) => r.level === l).length])),
   );
@@ -121,7 +120,7 @@
       const d = await getDay();
       await saveDailyCheck({ ...d.check, symptoms: [...d.check.symptoms, symptom] });
       await refresh();
-      notice = `${SYMPTOM_LABEL[symptom.kind]} is saved for today. The level is evaluated again.`;
+      notice = `${SYMPTOM_LABEL[symptom.kind]} is saved.`;
     } catch (err) {
       error = toAppError(err);
     } finally {
@@ -139,9 +138,6 @@
     <section class="card figcard" aria-labelledby="b-f">
       <header>
         <h2 id="b-f">Front and back</h2>
-        <span class="eyebrow">
-          Data of {missionDayLabel(app.assessment.mission_day).toLowerCase()}
-        </span>
       </header>
       <div class="stage">
         <DotFigure
@@ -157,15 +153,11 @@
           <li data-lv={level} class:none={!counts[level]}>
             <span class="lg-l"><LevelIcon state={level} size={9} />{STATE_LABEL[level]}</span>
             <span class="lg-n">
-              <Ticker value={counts[level]} /><small>{counts[level] === 1 ? 'region' : 'regions'}</small>
+              <Ticker value={counts[level]} />
             </span>
           </li>
         {/each}
       </ul>
-      <p class="small muted hint">
-        Only a flagged region takes a colour. Press Tab to move between regions. Press Enter to
-        open a region.
-      </p>
     </section>
 
     <section class="card side" aria-labelledby="b-p">
@@ -174,19 +166,21 @@
           <div class="panel">
             <header class="ch">
               <h2 id="b-p">{REGION_LABEL[selected.region]}</h2>
-              <button class="btn ghost sm" onclick={() => select(null)}>All regions</button>
+              <button
+                class="btn ghost sm icon"
+                onclick={() => select(null)}
+                aria-label="All regions"
+                title="All regions"
+              >
+                <Icon name="close" size={16} />
+              </button>
             </header>
             <div class="row">
               <LevelBadge state={selected.level} size="lg" />
-              <span class="muted small">
-                {selected.fired.length
-                  ? `${selected.fired.length} ${selected.fired.length > 1 ? 'rules' : 'rule'} fired here today.`
-                  : 'No rule fired here today.'}
-              </span>
             </div>
 
             <div class="sect">
-              <h3 class="lbl">Rules fired in this region</h3>
+              <h3 class="lbl">Rules fired</h3>
               {#each selected.fired as rule, i (i)}
                 <FiredRuleCard {rule} index={i} />
               {:else}
@@ -209,16 +203,16 @@
                     {number(s.baseline?.median ?? null)}
                   </span>
                   <button
-                    class="btn ghost sm"
+                    class="btn ghost sm icon"
                     onclick={() => navigate('trends', { indicator: s.indicator })}
+                    aria-label="Show the trend: {info.label}"
+                    title="Show the trend"
                   >
-                    Show the trend
+                    <Icon name="trends" size={15} />
                   </button>
                 </div>
               {:else}
-                <p class="muted">
-                  No numeric indicator is tied to this region. Symptoms and red flags still count.
-                </p>
+                <p class="muted">No indicator in this region.</p>
               {/each}
             </div>
 
@@ -235,12 +229,12 @@
                   <span class="small muted num">{h.today ? 'today' : `day ${h.day}`}</span>
                 </div>
               {:else}
-                <p class="muted">No symptom logged in this region.</p>
+                <p class="muted">None.</p>
               {/each}
             </div>
 
             <form class="well form" onsubmit={logSymptom}>
-              <h3>Log a symptom in this region, today</h3>
+              <h3>Log a symptom</h3>
               <div class="two">
                 <label class="field">
                   <span>Symptom</span>
@@ -292,12 +286,7 @@
       {:else}
         <header class="ch">
           <h2 id="b-p">All regions</h2>
-          <span class="eyebrow">{flagged ? `${flagged} flagged` : 'No flag'}</span>
         </header>
-        <p class="muted">
-          Select a region on the figure or in this list. Each region shows its level, its symptoms
-          and its indicators, and you can log a symptom there.
-        </p>
         <div class="rlist">
           {#each regions as r, i (r.region)}
             <button
@@ -382,21 +371,8 @@
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
-  .lg-n small {
-    margin-left: 6px;
-    font-size: 12.5px;
-    font-weight: 400;
-    letter-spacing: -0.006em;
-    color: var(--muted);
-  }
   .legend li.none .lg-n {
     color: var(--faint);
-  }
-  .legend li.none .lg-n small {
-    color: var(--faint);
-  }
-  .hint {
-    max-width: none;
   }
   .figcard,
   .side {
