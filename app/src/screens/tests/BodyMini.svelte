@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
+  import { figure } from '../../lib/figure.svelte';
   import type { BodyRegion, IndicatorState } from '../../lib/types';
   import DotFigure from './DotFigure.svelte';
 
@@ -12,7 +13,7 @@
 
 <div class="bodymini">
   <div class="mini" aria-hidden="true">
-    <DotFigure {levels} labels={false} />
+    <DotFigure {levels} labels={false} sex={figure.sex} />
   </div>
   <div class="side">{@render children()}</div>
 </div>

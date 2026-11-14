@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Sex } from '../../lib/figure.svelte';
   import { REGION_LABEL, STATE_LABEL } from '../../lib/labels';
   import LevelIcon from '../../lib/LevelIcon.svelte';
   import type { BodyRegion, IndicatorState } from '../../lib/types';
@@ -20,6 +21,7 @@
     selected = null,
     highlight = null,
     labels = 'auto',
+    sex = 'male',
     onpick,
     onhover,
   }: {
@@ -27,13 +29,14 @@
     selected?: BodyRegion | null;
     highlight?: BodyRegion | null;
     labels?: boolean | 'auto';
+    sex?: Sex;
     onpick?: (region: BodyRegion) => void;
     onhover?: (region: BodyRegion | null) => void;
   } = $props();
 
   const FLAGGED: IndicatorState[] = ['self_care', 'tell_cmo', 'flight_surgeon'];
   const SIDES: Side[] = ['front', 'back'];
-  const GEO = { front: figure('front'), back: figure('back') };
+  const GEO = $derived({ front: figure('front', sex), back: figure('back', sex) });
   const TOP = 6;
   const H = 492;
   const GLOW = 14;
@@ -73,7 +76,7 @@
   const pins = $derived(
     withLabels
       ? ORDER.map((z, i) => {
-          const pin = PIN[z];
+          const pin = PIN[sex][z];
           const right = pin.side === 'back';
           const ax = offset[pin.side] + pin.x;
           const ay = TOP + pin.y;
@@ -154,14 +157,14 @@
       viewBox="0 0 {W} {H}"
       role={onpick ? 'group' : 'img'}
       aria-label={onpick
-        ? 'Body figure, front and back. Each region shows its level. Select a region for its symptoms and indicators.'
-        : 'Body figure, front and back. Only a flagged region takes a colour.'}
+        ? `${sex === 'female' ? 'Female' : 'Male'} body figure, front and back. Each region shows its level. Select a region for its symptoms and indicators.`
+        : `${sex === 'female' ? 'Female' : 'Male'} body figure, front and back. Only a flagged region takes a colour.`}
     >
       {#each SIDES as side (side)}
         <g transform="translate({offset[side]},{TOP})">
           <ellipse class="floor" cx={FIG_W / 2} cy={FLOOR_Y} rx="74" ry="10.5" />
           <ellipse class="floor ring" cx={FIG_W / 2} cy={FLOOR_Y} rx="50" ry="7" />
-          {#each ORDER as z (z)}
+          {#each ORDER as z (`${sex}-${z}`)}
             {@const geo = GEO[side][z]}
             {#if geo}
               {@const lv = levelOf(z)}

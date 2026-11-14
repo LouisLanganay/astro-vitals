@@ -3,6 +3,7 @@
 
   import { getDay, saveDailyCheck } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
+  import { figure, setSex, type Sex } from '../../lib/figure.svelte';
   import FiredRuleCard from '../../lib/FiredRuleCard.svelte';
   import Icon from '../../lib/Icon.svelte';
   import { INDICATOR_INFO, REGION_LABEL, STATE_LABEL, SYMPTOM_LABEL } from '../../lib/labels';
@@ -25,6 +26,10 @@
   import DotFigure from './DotFigure.svelte';
 
   const FLAGGED: Level[] = ['self_care', 'tell_cmo', 'flight_surgeon'];
+  const SEXES: [Sex, string][] = [
+    ['male', 'Male'],
+    ['female', 'Female'],
+  ];
   const HISTORY_DAYS = 14;
   const SEVERITY_LABEL = ['Mild', 'Moderate', 'Severe'];
   const SEVERITIES = Array.from(
@@ -138,10 +143,18 @@
     <section class="card figcard" aria-labelledby="b-f">
       <header>
         <h2 id="b-f">Front and back</h2>
+        <div class="seg" role="group" aria-label="Body figure">
+          {#each SEXES as [value, label] (value)}
+            <button type="button" aria-pressed={figure.sex === value} onclick={() => setSex(value)}>
+              {label}
+            </button>
+          {/each}
+        </div>
       </header>
       <div class="stage">
         <DotFigure
           {levels}
+          sex={figure.sex}
           selected={selected?.region ?? null}
           highlight={hover}
           onpick={(z) => select(z)}
@@ -383,11 +396,6 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
-  @container (max-width: 400px) {
-    .rlist {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
 
   .panel {
     display: flex;
@@ -463,6 +471,11 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+  }
+  @container (max-width: 400px) {
+    .rlist {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
   .rbtn {
     display: flex;
