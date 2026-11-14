@@ -40,6 +40,8 @@ export const ICON = {
   settings:
     '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
   chevron: '<path d="m9 5.5 6.5 6.5L9 18.5"/>',
+  more: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  close: '<path d="M18 6 6 18M6 6l12 12"/>',
 } as const;
 
 export type IconName = keyof typeof ICON;

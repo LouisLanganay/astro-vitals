@@ -1243,5 +1243,218 @@ export const FYNEX: Record<string, IconDef> = {
    }
   },
   "options": {}
+ },
+ "more": {
+  "source": "menu",
+  "parts": [
+   {
+    "tag": "path",
+    "d": "M4 12h16",
+    "part": "l2"
+   },
+   {
+    "tag": "path",
+    "d": "M4 18h16",
+    "part": "l3"
+   },
+   {
+    "tag": "path",
+    "d": "M4 6h16",
+    "part": "l1"
+   }
+  ],
+  "motion": {
+   "l1": {
+    "initial": {
+     "pathLength": 1,
+     "opacity": 1,
+     "transition": {
+      "duration": 0.25,
+      "ease": [
+       0.23,
+       1,
+       0.32,
+       1
+      ]
+     }
+    },
+    "animate": {
+     "pathLength": [
+      0,
+      1
+     ],
+     "opacity": [
+      0,
+      1
+     ],
+     "transition": {
+      "pathLength": {
+       "duration": 0.3,
+       "ease": [
+        0.23,
+        1,
+        0.32,
+        1
+       ]
+      },
+      "opacity": {
+       "duration": 0.12,
+       "ease": "linear"
+      }
+     }
+    }
+   },
+   "l2": {
+    "initial": {
+     "pathLength": 1,
+     "opacity": 1,
+     "transition": {
+      "duration": 0.25,
+      "ease": [
+       0.23,
+       1,
+       0.32,
+       1
+      ]
+     }
+    },
+    "animate": {
+     "pathLength": [
+      0,
+      0,
+      1
+     ],
+     "opacity": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "transition": {
+      "pathLength": {
+       "duration": 0.37,
+       "times": [
+        0,
+        0.1891891891891892,
+        1
+       ],
+       "ease": [
+        0.23,
+        1,
+        0.32,
+        1
+       ]
+      },
+      "opacity": {
+       "duration": 0.37,
+       "times": [
+        0,
+        0.1891891891891892,
+        0.5135135135135136,
+        1
+       ],
+       "ease": "linear"
+      }
+     }
+    }
+   },
+   "l3": {
+    "initial": {
+     "pathLength": 1,
+     "opacity": 1,
+     "transition": {
+      "duration": 0.25,
+      "ease": [
+       0.23,
+       1,
+       0.32,
+       1
+      ]
+     }
+    },
+    "animate": {
+     "pathLength": [
+      0,
+      0,
+      1
+     ],
+     "opacity": [
+      0,
+      0,
+      1,
+      1
+     ],
+     "transition": {
+      "pathLength": {
+       "duration": 0.44,
+       "times": [
+        0,
+        0.31818181818181823,
+        1
+       ],
+       "ease": [
+        0.23,
+        1,
+        0.32,
+        1
+       ]
+      },
+      "opacity": {
+       "duration": 0.44,
+       "times": [
+        0,
+        0.31818181818181823,
+        0.5909090909090909,
+        1
+       ],
+       "ease": "linear"
+      }
+     }
+    }
+   }
+  },
+  "options": {}
+ },
+ "close": {
+  "source": "x",
+  "parts": [
+   {
+    "tag": "path",
+    "d": "M18 6 6 18"
+   },
+   {
+    "tag": "path",
+    "d": "m6 6 12 12"
+   }
+  ],
+  "motion": {
+   "group": {
+    "initial": {
+     "rotate": 0,
+     "transition": {
+      "duration": 0.25,
+      "ease": [
+       0.23,
+       1,
+       0.32,
+       1
+      ]
+     }
+    },
+    "animate": {
+     "rotate": 90,
+     "transition": {
+      "duration": 0.45,
+      "ease": [
+       0.23,
+       1,
+       0.32,
+       1
+      ]
+     }
+    }
+   }
+  },
+  "options": {}
  }
 };

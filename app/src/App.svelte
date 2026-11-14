@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, tick, type Component } from 'svelte';
   import { prefersReducedMotion } from 'svelte/motion';
-  import { fly } from 'svelte/transition';
+  import { fade, fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
 
   import { errorText } from './lib/errors';
   import GradientDefs from './lib/GradientDefs.svelte';
@@ -27,20 +28,23 @@
     label: string;
     short: string;
     title: string;
+    main: boolean;
+    sub: string;
     icon: IconName;
     component: Component;
   }
 
   const SCREENS: ScreenDef[] = [
-    { id: 'home', label: 'Today', short: 'Today', title: 'Today', icon: 'home', component: Home },
-    { id: 'daily_check', label: 'Daily check', short: 'Check', title: 'Daily check', icon: 'check', component: DailyCheck },
-    { id: 'body', label: 'Body', short: 'Body', title: 'Body', icon: 'body', component: BodyFigure },
-    { id: 'trends', label: 'Trends', short: 'Trends', title: 'Trends', icon: 'trends', component: Trends },
-    { id: 'pvt', label: 'PVT-B', short: 'PVT-B', title: 'PVT-B reaction test', icon: 'bolt', component: Pvt },
-    { id: 'vision', label: 'Vision test', short: 'Vision', title: 'Vision test', icon: 'eye', component: VisionTest },
-    { id: 'export', label: 'Export', short: 'Export', title: 'Packet for the flight surgeon', icon: 'export', component: PacketExport },
-    { id: 'settings', label: 'Settings', short: 'Rules', title: 'Rules and settings', icon: 'settings', component: Settings },
+    { id: 'home', label: 'Today', short: 'Today', title: 'Today', icon: 'home', main: true, sub: '', component: Home },
+    { id: 'daily_check', label: 'Daily check', short: 'Check', title: 'Daily check', icon: 'check', main: true, sub: '', component: DailyCheck },
+    { id: 'body', label: 'Body', short: 'Body', title: 'Body', icon: 'body', main: true, sub: '', component: BodyFigure },
+    { id: 'trends', label: 'Trends', short: 'Trends', title: 'Trends', icon: 'trends', main: true, sub: '', component: Trends },
+    { id: 'pvt', label: 'PVT-B', short: 'PVT-B', title: 'PVT-B reaction test', icon: 'bolt', main: false, sub: 'Reaction test, 3 minutes', component: Pvt },
+    { id: 'vision', label: 'Vision test', short: 'Vision', title: 'Vision test', icon: 'eye', main: false, sub: 'Acuity and Amsler grid, each week', component: VisionTest },
+    { id: 'export', label: 'Export', short: 'Export', title: 'Packet for the flight surgeon', icon: 'export', main: false, sub: 'Packet for the flight surgeon', component: PacketExport },
+    { id: 'settings', label: 'Settings', short: 'Settings', title: 'Rules and settings', icon: 'settings', main: false, sub: 'Rules, mission and scenarios', component: Settings },
   ];
+  const MORE = SCREENS.filter((s) => !s.main);
 
   let dismissed = $state(false);
   const current = $derived(SCREENS.find((s) => s.id === app.route.screen) ?? SCREENS[0]);
@@ -53,10 +57,15 @@
   let headEl = $state<HTMLElement>();
   let scrolled = $state(false);
   let pill = $state({ x: 0, y: 0, w: 0, h: 0, ready: false });
+  let moreOpen = $state(false);
+  let moreBtn = $state<HTMLButtonElement>();
+  let sheetEl = $state<HTMLElement>();
+  const inMore = $derived(!current.main);
 
   async function placePill() {
     await tick();
-    const el = navEl?.querySelector<HTMLElement>('[aria-current="page"]');
+    const all = navEl?.querySelectorAll<HTMLElement>('[aria-current="page"]') ?? [];
+    const el = Array.from(all).find((e) => e.offsetParent !== null);
     if (!el) return;
     pill = { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight, ready: true };
     el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
@@ -68,13 +77,49 @@
   });
 
   function go(id: Screen) {
+    moreOpen = false;
     if (id === current.id) return;
     navigate(id);
     window.scrollTo({ top: 0 });
   }
 
+  async function openMore() {
+    moreOpen = true;
+    await tick();
+    sheetEl?.querySelector<HTMLElement>('[aria-current="page"], .tile')?.focus({ preventScroll: true });
+  }
+
+  function closeMore(refocus = true) {
+    if (!moreOpen) return;
+    moreOpen = false;
+    if (refocus) moreBtn?.focus({ preventScroll: true });
+  }
+
+  function sheetKey(e: KeyboardEvent) {
+    if (!moreOpen) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeMore();
+      return;
+    }
+    if (e.key !== 'Tab' || !sheetEl) return;
+    const items = Array.from(sheetEl.querySelectorAll<HTMLElement>('button'));
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   onMount(() => {
     refresh();
+    const wide = matchMedia('(min-width: 1000px)');
+    const onWide = () => wide.matches && closeMore(false);
+    wide.addEventListener('change', onWide);
     const ro = new ResizeObserver(() => placePill());
     if (navEl) ro.observe(navEl);
     const io = new IntersectionObserver(
@@ -83,6 +128,7 @@
     );
     if (headEl) io.observe(headEl);
     return () => {
+      wide.removeEventListener('change', onWide);
       ro.disconnect();
       io.disconnect();
     };
@@ -90,6 +136,7 @@
 </script>
 
 <GradientDefs />
+<svelte:window onkeydown={sheetKey} />
 
 {#if app.error?.kind === 'rules'}
   <main class="blocked">
@@ -144,6 +191,7 @@
         {#each SCREENS as s (s.id)}
           <button
             class="item"
+            class:sec={!s.main}
             title={s.label}
             aria-current={s.id === current.id ? 'page' : undefined}
             onclick={() => go(s.id)}
@@ -156,6 +204,22 @@
             {/if}
           </button>
         {/each}
+        <button
+          class="item more"
+          bind:this={moreBtn}
+          aria-haspopup="dialog"
+          aria-expanded={moreOpen}
+          aria-current={inMore ? 'page' : undefined}
+          onclick={() => (moreOpen ? closeMore() : openMore())}
+        >
+          {#key moreOpen ? 'close' : inMore ? current.icon : 'more'}
+            <span class="swap">
+              <Icon name={moreOpen ? 'close' : inMore ? current.icon : 'more'} size={18} active={moreOpen} />
+            </span>
+          {/key}
+          <span class="long">More screens</span>
+          <span class="short" aria-hidden="true">{inMore && !moreOpen ? current.short : 'More'}</span>
+        </button>
       </nav>
 
       <div class="mission" aria-label="Mission progress">
@@ -227,6 +291,35 @@
       explains each result and gives one action. It does not diagnose. Data stays on this device.
     </p>
   </div>
+  {#if moreOpen}
+    <div
+      class="scrim"
+      role="presentation"
+      transition:fade={{ duration: prefersReducedMotion.current ? 0 : 180 }}
+      onclick={() => closeMore()}
+    ></div>
+    <div
+      class="sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-label="More screens"
+      bind:this={sheetEl}
+      transition:fly={{ y: prefersReducedMotion.current ? 0 : 28, duration: prefersReducedMotion.current ? 0 : 260, easing: cubicOut }}
+    >
+      {#each MORE as s, i (s.id)}
+        <button
+          class="tile"
+          style:--i={i}
+          aria-current={s.id === current.id ? 'page' : undefined}
+          onclick={() => go(s.id)}
+        >
+          <span class="ic"><Icon name={s.icon} size={19} active={s.id === current.id} /></span>
+          <b>{s.label}</b>
+          <span class="tsub">{s.sub}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
 {/if}
 
 <style>
@@ -391,7 +484,7 @@
     bottom: 0;
     z-index: 30;
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 2px;
     padding: 6px max(6px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px))
       max(6px, env(safe-area-inset-left, 0px));
@@ -461,6 +554,83 @@
   :global(html[data-test-running]) .nav {
     transform: translateY(110%);
     pointer-events: none;
+  }
+  .item.sec {
+    display: none;
+  }
+  .swap {
+    display: grid;
+    animation: pop-in 240ms var(--ease-spring) both;
+  }
+  .scrim {
+    position: fixed;
+    inset: 0 0 calc(68px + env(safe-area-inset-bottom, 0px));
+    z-index: 35;
+    background: rgba(0, 0, 0, 0.42);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sheet {
+    position: fixed;
+    left: max(10px, env(safe-area-inset-left, 0px));
+    right: max(10px, env(safe-area-inset-right, 0px));
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 10px;
+    border-radius: 24px;
+    background: linear-gradient(180deg, var(--card-a), var(--card-b));
+    box-shadow: inset 0 1px 0 var(--line), 0 0 0 1px var(--edge), var(--shadow);
+  }
+  .tile {
+    display: grid;
+    justify-items: start;
+    align-content: start;
+    gap: 4px;
+    min-height: 104px;
+    padding: 14px;
+    border: 0;
+    border-radius: 16px;
+    background: var(--well);
+    box-shadow: inset 0 0 0 1px var(--line);
+    color: var(--fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    animation: rise-in 280ms var(--ease-out) backwards;
+    animation-delay: calc(var(--i) * 35ms + 40ms);
+    transition:
+      transform var(--t-fast) var(--ease-out),
+      background-color var(--t-fast);
+  }
+  .tile:active {
+    transform: scale(0.97);
+  }
+  .tile[aria-current='page'] {
+    background: var(--well-2);
+    box-shadow: inset 0 0 0 1.5px var(--ui);
+  }
+  .tile .ic {
+    margin-bottom: 6px;
+  }
+  .tile b {
+    font-weight: 500;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+  .tsub {
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+  @media (hover: hover) {
+    .tile:hover {
+      background: var(--well-2);
+    }
   }
   .item .long {
     position: absolute;
@@ -552,6 +722,14 @@
       min-height: 44px;
       padding: 10px 14px;
       font-size: 14.5px;
+    }
+    .item.sec {
+      display: flex;
+    }
+    .item.more,
+    .scrim,
+    .sheet {
+      display: none;
     }
     .item .long {
       position: static;
