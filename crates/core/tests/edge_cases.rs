@@ -189,6 +189,7 @@ fn an_indicator_with_only_drift_rules_and_one_value_is_not_enough_data() {
     for i in [Indicator::Mood, Indicator::Stress, Indicator::Tiredness] {
         assert_eq!(state(&a, i), IndicatorState::NotEnoughData, "{i:?}");
     }
+    assert_eq!(indicator(&a, Indicator::Mood).drift_score, None);
     put(&mut d, 7..10, |a| a.mood = 0);
     let a = at(&d, 10);
     assert_eq!(ids(&a), ["mood_drift_7d"]);

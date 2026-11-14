@@ -453,6 +453,13 @@ pub fn evaluate(doc: &Document, rules: &RuleSet, date: NaiveDate) -> Assessment 
             } else {
                 IndicatorState::NotEnoughData
             };
+            let drift_min_days = rules
+                .rules
+                .iter()
+                .filter(|r| r.kind == RuleKind::Drift && indicator(&r.indicator) == Some(ind))
+                .map(|r| r.min_days.unwrap_or(1))
+                .min()
+                .unwrap_or(1);
             IndicatorStatus {
                 indicator: ind,
                 region: ind.body_region(),
@@ -460,7 +467,7 @@ pub fn evaluate(doc: &Document, rules: &RuleSet, date: NaiveDate) -> Assessment 
                 value: value(doc, ind, date),
                 mean_7d,
                 baseline: baseline(doc, ind),
-                drift_score: drift_score(doc, ind, date, MEAN_WINDOW_DAYS, 1),
+                drift_score: drift_score(doc, ind, date, MEAN_WINDOW_DAYS, drift_min_days),
             }
         })
         .collect();
