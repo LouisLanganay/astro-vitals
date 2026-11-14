@@ -1,0 +1,75 @@
+name: Android
+
+on:
+  push:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: mobile-core
+          cache-directories: target/mobile-core
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Generate the core
+        run: ./scripts/build-core.sh
+
+      - name: Type check
+        run: bunx tsc --noEmit
+
+      - name: Engine test
+        run: bun test
+
+      - name: Prebuild
+        run: bunx expo prebuild -p android --no-install --clean
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build the APK
+        working-directory: mobile/android
+        env:
+          NODE_ENV: production
+        run: |
+          ./gradlew assembleRelease \
+            -PreactNativeArchitectures=arm64-v8a \
+            -Dorg.gradle.jvmargs=-Xmx6g \
+            --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: astro-vitals-apk
+          path: mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
