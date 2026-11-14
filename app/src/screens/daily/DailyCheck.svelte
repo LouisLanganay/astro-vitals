@@ -27,6 +27,7 @@
     type SymptomKind,
   } from '../../lib/types';
   import { minutesError, num } from './num';
+  import FeelFace, { type Feeling } from './FeelFace.svelte';
   import SleepBar from './SleepBar.svelte';
 
   type ScaleKey = 'sleep_quality' | 'mood' | 'stress' | 'tiredness' | 'workload';
@@ -234,6 +235,13 @@
     return `${SEVERITY_SHORT[s.severity - 1] ?? s.severity}, ${REGION_LABEL[s.region].toLowerCase()}, ${treated}`;
   }
 
+  function slide(e: PointerEvent, key: ScaleKey) {
+    if (e.type === 'pointermove' && e.buttons === 0) return;
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const index = Math.floor(((e.clientX - box.left) / box.width) * (SCALE_MAX + 1));
+    scales[key] = Math.max(0, Math.min(SCALE_MAX, index));
+  }
+
   function step(def: (typeof NUMBERS)[number], dir: 1 | -1, el: HTMLElement | null) {
     const now = numbers[def.key] ?? 0;
     const next = Math.min(def.max, Math.max(0, now + dir * def.inc));
@@ -329,22 +337,26 @@
   </header>
 {/snippet}
 
-{#snippet scale(def: ScaleDef)}
+{#snippet scale(def: ScaleDef, face: boolean)}
   {@const field = `answers.${def.key}`}
   {@const value = scales[def.key]}
   <div
     class="fld"
+    class:feel={face}
     class:bad={invalid(field)}
     role="radiogroup"
     aria-labelledby="sc-{def.key}"
     aria-describedby="sch-{def.key}"
     aria-invalid={invalid(field)}
   >
+    {#if face}
+      <span class="ff"><FeelFace feeling={def.key as Feeling} {value} /></span>
+    {/if}
     <div class="fl">
       <span class="t" id="sc-{def.key}">{def.label}</span>
       <span class="val"><Ticker {value} /><small>/ {SCALE_MAX}</small></span>
     </div>
-    <div class="rate">
+    <div class="rate" onpointerdown={(e) => slide(e, def.key)} onpointermove={(e) => slide(e, def.key)}>
       {#each Array.from({ length: SCALE_MAX + 1 }, (_, i) => i) as i (i)}
         <input
           type="radio"
@@ -452,7 +464,7 @@
             </div>
             <SleepBar start={sleepStart} end={sleepEnd} />
           </div>
-          {@render scale(SLEEP_QUALITY)}
+          {@render scale(SLEEP_QUALITY, false)}
           <div class="fld">
             <label class="tog">
               <input type="checkbox" bind:checked={sleepAid} />
@@ -466,7 +478,7 @@
           {@render head('dc-feel', SECTION_ICON.feel, 'How you feel', '')}
           <div class="scales">
             {#each SCALES as def (def.key)}
-              {@render scale(def)}
+              {@render scale(def, true)}
             {/each}
           </div>
         </section>
@@ -748,12 +760,47 @@
   .scales {
     display: flex;
     flex-direction: column;
-    gap: 22px;
+    gap: 12px;
   }
   .rate {
     display: grid;
     grid-template-columns: repeat(11, minmax(0, 1fr));
     gap: 4px;
+    touch-action: pan-y;
+  }
+  .feel {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    grid-template-areas:
+      'face head'
+      'face rate'
+      'face ends'
+      'error error';
+    gap: 8px 18px;
+    align-items: center;
+    padding: 14px 16px 12px 14px;
+    border-radius: 20px;
+    background: var(--well);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .feel .ff {
+    grid-area: face;
+    padding: 2px;
+  }
+  .feel .fl {
+    grid-area: head;
+  }
+  .feel .rate {
+    grid-area: rate;
+  }
+  .feel .ends {
+    grid-area: ends;
+  }
+  .feel :global(.error) {
+    grid-area: error;
+  }
+  .feel .rate label {
+    background: var(--well-2);
   }
   .rate input {
     position: absolute;
@@ -1200,6 +1247,16 @@
   @media (max-width: 480px) {
     .rate {
       gap: 3px;
+    }
+    .feel {
+      grid-template-columns: 52px minmax(0, 1fr);
+      grid-template-areas:
+        'face head'
+        'rate rate'
+        'ends ends'
+        'error error';
+      gap: 10px 14px;
+      padding: 12px;
     }
     .rate label {
       height: 42px;
