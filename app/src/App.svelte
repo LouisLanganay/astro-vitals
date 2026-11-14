@@ -384,6 +384,7 @@
     background: linear-gradient(90deg, var(--ui-2), var(--ui));
     transform-origin: left;
     transition: transform 600ms var(--ease-out);
+    animation: grow-x 900ms 200ms var(--ease-out) backwards;
   }
   @media (min-width: 1000px) {
     .rail {
