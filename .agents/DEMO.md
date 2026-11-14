@@ -10,7 +10,7 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 
 ## Load the scenario
 
-1. Open "Settings" ("Rules" in the bottom bar on a phone).
+1. Open "Settings" (in "More" on a phone).
 2. In "Load a scenario", select `sleep_debt`. Select "Replace the data".
 3. Expected: mission day 120. First `self_care` day: 50. First `tell_cmo` day: 57 (a headache on more than 7 days in sequence).
 
