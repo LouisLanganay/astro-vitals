@@ -858,13 +858,6 @@ fn a_packet_is_16_kb_or_less_for_all_input() {
     assert_eq!(p.flagged.len(), 12);
     assert_eq!(p.symptoms.len(), 8);
     assert!(p.symptoms.iter().all(|s| s.date == day(20)));
-    println!(
-        "probe packet: {} bytes, values {}, baselines {}, sources {}",
-        json.len(),
-        p.flagged[0].values.len(),
-        p.baselines.len(),
-        p.fired.iter().filter(|f| !f.source.is_empty()).count()
-    );
 
     let mut d = doc();
     for n in 0..14 {

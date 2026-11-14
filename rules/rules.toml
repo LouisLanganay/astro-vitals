@@ -80,6 +80,7 @@ source = "https://doi.org/10.1093/sleep/zsac006"
 id = "mood_drift_7d"
 indicator = "mood"
 kind = "drift"
+threshold = 2.0
 window_days = 7
 min_days = 4
 level = "self_care"
@@ -92,6 +93,7 @@ source = "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093
 id = "stress_drift_7d"
 indicator = "stress"
 kind = "drift"
+threshold = 2.0
 window_days = 7
 min_days = 4
 level = "self_care"
@@ -104,6 +106,7 @@ source = "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093
 id = "tiredness_drift_7d"
 indicator = "tiredness"
 kind = "drift"
+threshold = 2.0
 window_days = 7
 min_days = 4
 level = "self_care"
