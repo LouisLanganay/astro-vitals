@@ -340,11 +340,12 @@
               <FiredRuleCard {rule} index={k % 3}>
                 {#if subject.type === 'indicator'}
                   <button
-                    class="btn sm"
+                    class="btn sm icon"
                     onclick={() => navigate('trends', { indicator: subject.value })}
+                    aria-label="Show the trend: {ruleTitle(rule)}"
+                    title="Show the trend"
                   >
-                    <Icon name="trends" size={14} />
-                    Trend
+                    <Icon name="trends" size={15} />
                   </button>
                 {/if}
               </FiredRuleCard>

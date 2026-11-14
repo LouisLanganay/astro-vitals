@@ -148,7 +148,7 @@
             <svg class="tickmark" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12.5l4.5 4.5L19 7.5" pathLength="1" />
             </svg>
-            Exported. Export again
+            Export again
           {:else}
             {#if !exporting}<Icon name="export" size={17} />{/if}
             {exporting ? 'Exporting...' : 'Export'}
@@ -165,9 +165,13 @@
       <section class="card rise" style:--i={1} aria-labelledby="x-c">
         <header>
           <h2 id="x-c">Packet content</h2>
-          <span class="eyebrow lock">
-            <Icon name="lock" size={13} />
-            Nothing leaves this device until you export it
+          <span
+            class="eyebrow lock"
+            role="img"
+            aria-label="Nothing leaves this device until you export it"
+            title="Nothing leaves this device until you export it"
+          >
+            <Icon name="lock" size={15} />
           </span>
         </header>
         {#key preview.json}

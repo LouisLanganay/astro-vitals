@@ -3,6 +3,7 @@
   import { errorText, fieldMessage, toAppError } from '../../lib/errors';
   import { missionDayLabel } from '../../lib/format';
   import { INDICATOR_INFO, SCENARIO_LABEL, STATE_LABEL } from '../../lib/labels';
+  import Icon from '../../lib/Icon.svelte';
   import LevelBadge from '../../lib/LevelBadge.svelte';
   import { catalog, loadCatalog } from '../../lib/catalog.svelte';
   import { catalogCondition, catalogTitle, formatValue, isUrl, ruleFact, sourceLabel } from '../../lib/rules';
@@ -191,8 +192,14 @@
               {#if open}
               <p class="act">{rule.action}</p>
               <p class="src">
+                <Icon name="link" size={13} />
                 {#if isUrl(rule.source)}
-                  <a href={rule.source} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={rule.source}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Source: {sourceLabel(rule.source)}"
+                  >
                     {sourceLabel(rule.source)}
                   </a>
                 {:else}
@@ -295,9 +302,6 @@
 
       <section class="card rise" style:--i={3} aria-labelledby="st-sc">
         <header><h2 id="st-sc">Load a scenario</h2></header>
-        <p class="small muted">
-          A scenario replaces all stored data.
-        </p>
         <div class="seg" role="group" aria-label="Scenario">
           {#each SCENARIO_IDS as id (id)}
             <button
@@ -463,6 +467,9 @@
     font-size: 14px;
   }
   .src {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 13px;
     color: var(--muted);
     overflow-wrap: anywhere;
