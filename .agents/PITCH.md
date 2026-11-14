@@ -60,6 +60,7 @@ Example: a mean fluid intake below 2.5 L for 3 days fires a self-care rule. The 
 - Scenario "Sleep debt": 120 mission days.
 
 **Speaker notes**
+0. Open the link and select "Enter the ship" (or open the link with `#app` to skip the intro).
 1. Today: mission day 120, level "Tell the CMO". Show one fired rule with its source.
 2. Trends, Sleep duration: the sleep decreases from day 40. Show the 7-day mean and the baseline.
 3. Say: first self-care on day 50, first "tell the CMO" on day 57.
@@ -82,7 +83,7 @@ We want to be clear about what the tool does not do. A flight surgeon must revie
 
 **On screen**
 - La Coflop, NASA Space Apps Challenge 2026, Paris.
-- [Team members: names and roles]
+- Elwann, Louis, Ravenne, Seb, Tug: developers.
 - Built with Rust, Tauri 2 and Svelte 5.
 
 **Speaker notes**
