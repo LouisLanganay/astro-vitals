@@ -37,6 +37,15 @@
   let info = $state.raw<ScenarioInfo | null>(null);
 
   let filter = $state<'all' | Level>('all');
+  const NARROW = '(max-width: 699px)';
+  let narrow = $state(typeof matchMedia === 'function' && matchMedia(NARROW).matches);
+  let opened = $state<Record<string, boolean>>({});
+  $effect(() => {
+    const mq = matchMedia(NARROW);
+    const on = () => (narrow = mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  });
   const FILTERS: ['all' | Level, string][] = [
     ['all', 'All'],
     ...LEVELS.filter((l) => l !== 'ok').map((l): [Level, string] => [l, STATE_LABEL[l]]),
@@ -155,19 +164,35 @@
           {#each rules as rule, k (rule.id)}
             {@const hit = firedById.get(rule.id)}
             {@const fact = hit ? ruleFact(hit) : null}
-            <article class="rrow rise" class:hit={!!hit} style:--i={Math.min(k, 10)}>
+            {@const open = !narrow || (opened[rule.id] ?? !!hit)}
+            <article class="rrow rise" class:hit={!!hit} class:shut={!open} style:--i={Math.min(k, 10)}>
               <div class="lv">
                 <LevelBadge state={rule.level} />
                 {#if hit}<span class="today">Fires today</span>{/if}
               </div>
               <div>
-                <h3>{catalogTitle(rule)}</h3>
+                <h3>
+                  {#if narrow}
+                    <button
+                      type="button"
+                      class="rtog"
+                      aria-expanded={open}
+                      onclick={() => (opened = { ...opened, [rule.id]: !open })}
+                    >
+                      <span>{catalogTitle(rule)}</span>
+                      <i aria-hidden="true"></i>
+                    </button>
+                  {:else}
+                    {catalogTitle(rule)}
+                  {/if}
+                </h3>
                 <p class="meta">
                   <code>{rule.id}</code>
                   {catalogCondition(rule, prescription)}{fact ? `. Today: ${fact}` : ''}
                 </p>
-                <p class="exp">{rule.explanation}</p>
+                {#if open}<p class="exp">{rule.explanation}</p>{/if}
               </div>
+              {#if open}
               <p class="act">{rule.action}</p>
               <p class="src">
                 {#if isUrl(rule.source)}
@@ -178,6 +203,7 @@
                   {rule.source}
                 {/if}
               </p>
+              {/if}
             </article>
           {:else}
             <p class="muted empty">No rule at this level.</p>
@@ -385,6 +411,52 @@
       grid-template-columns: 140px minmax(0, 1.25fr) minmax(0, 1fr) 150px;
       align-items: start;
     }
+  }
+  .rtog {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .rtog i {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin: 5px 4px 0 0;
+    border-right: 1.5px solid var(--muted);
+    border-bottom: 1.5px solid var(--muted);
+    transform: rotate(-135deg) translate(-2px, -2px);
+    transition: transform var(--t-mid) var(--ease-spring);
+  }
+  .shut .rtog i {
+    transform: rotate(45deg);
+  }
+  .rtog::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .rrow {
+    position: relative;
+  }
+  .rrow .src a {
+    position: relative;
+    z-index: 1;
+  }
+  .rrow:not(.shut) .exp,
+  .rrow:not(.shut) .act,
+  .rrow:not(.shut) .src {
+    animation: rise-in 240ms var(--ease-out) backwards;
   }
   .rrow h3 {
     font-size: 15.5px;

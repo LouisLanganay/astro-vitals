@@ -50,6 +50,8 @@
   const checkDue = $derived(app.day?.mission.due.some((t) => t.kind === 'daily_check') ?? false);
 
   let navEl = $state<HTMLElement>();
+  let headEl = $state<HTMLElement>();
+  let scrolled = $state(false);
   let pill = $state({ x: 0, y: 0, w: 0, h: 0, ready: false });
 
   async function placePill() {
@@ -75,7 +77,15 @@
     refresh();
     const ro = new ResizeObserver(() => placePill());
     if (navEl) ro.observe(navEl);
-    return () => ro.disconnect();
+    const io = new IntersectionObserver(
+      ([e]) => (scrolled = !e.isIntersecting && e.boundingClientRect.top < 0),
+      { rootMargin: '-72px 0px 0px 0px' },
+    );
+    if (headEl) io.observe(headEl);
+    return () => {
+      ro.disconnect();
+      io.disconnect();
+    };
   });
 </script>
 
@@ -99,8 +109,11 @@
           </svg>
         </span>
         <div class="bt">
-          <b>Astro Vitals</b>
-          <span>Crew health</span>
+          <div class="bn" class:out={scrolled}>
+            <b>Astro Vitals</b>
+            <span>Crew health</span>
+          </div>
+          <span class="ctitle" class:in={scrolled} aria-hidden="true">{current.title}</span>
         </div>
         {#if day != null}
           <span class="mday" aria-label="Mission day {day} of {MISSION_DAYS}">
@@ -154,7 +167,7 @@
       </div>
     </aside>
 
-    <header class="phead">
+    <header class="phead" bind:this={headEl}>
       <div>
         <p class="eyebrow">
           {#if day == null}
@@ -236,11 +249,30 @@
   }
   .rail {
     grid-area: rail;
+    position: sticky;
+    top: 0;
+    z-index: 20;
     display: flex;
     flex-direction: column;
     gap: 18px;
-    padding-top: 18px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    padding-bottom: 10px;
     min-width: 0;
+  }
+  .rail::before {
+    content: '';
+    position: absolute;
+    inset: 0 calc(-1 * max(16px, env(safe-area-inset-right, 0px))) 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+    z-index: -1;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: 0 1px 0 var(--line);
+    opacity: 0;
+    transition: opacity var(--t-fast) var(--ease-out);
+  }
+  .rail:has(.ctitle.in)::before {
+    opacity: 1;
   }
   .phead {
     grid-area: head;
@@ -257,14 +289,48 @@
   }
 
   .brand {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 0 6px;
   }
   .bt {
+    position: relative;
     flex: 1;
     min-width: 0;
+  }
+  .bn {
+    transition:
+      opacity 200ms var(--ease-out),
+      translate 260ms var(--ease-out);
+  }
+  .bn.out {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+  .brand .bt .ctitle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+    opacity: 0;
+    translate: 0 calc(-50% + 10px);
+    pointer-events: none;
+    transition:
+      opacity 200ms var(--ease-out),
+      translate 260ms var(--ease-out);
+  }
+  .brand .bt .ctitle.in {
+    opacity: 1;
+    translate: 0 -50%;
   }
   .mark {
     width: 38px;
@@ -287,14 +353,14 @@
     fill: var(--ui);
     stroke: none;
   }
-  .brand .bt b {
+  .brand .bn b {
     display: block;
     font-weight: 500;
     font-size: 15.5px;
     letter-spacing: -0.02em;
     line-height: 1.2;
   }
-  .brand .bt span {
+  .brand .bn span {
     display: block;
     font-size: 12px;
     color: var(--muted);
@@ -446,9 +512,19 @@
     .rail {
       position: sticky;
       top: env(safe-area-inset-top, 0px);
+      z-index: auto;
       align-self: start;
       padding-top: 34px;
+      padding-bottom: 0;
       gap: 28px;
+    }
+    .rail::before,
+    .brand .bt .ctitle {
+      display: none;
+    }
+    .bn.out {
+      opacity: 1;
+      translate: none;
     }
     .nav,
     :global(html[data-test-running]) .nav {

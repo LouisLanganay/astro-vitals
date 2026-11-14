@@ -428,7 +428,27 @@
   }
   @media (max-width: 560px) {
     .lvcard {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: 'say say' 'gauge why' 'btns btns';
+      gap: 14px 18px;
+    }
+    .lvcard > div {
+      display: contents;
+    }
+    .say {
+      grid-area: say;
+    }
+    .why {
+      grid-area: why;
+      margin: 0;
+    }
+    .lvcard .btns {
+      grid-area: btns;
+      margin-top: 0;
+    }
+    .lvcard > :global(.gauge) {
+      grid-area: gauge;
+      max-width: 124px;
     }
   }
   .strip-wrap {

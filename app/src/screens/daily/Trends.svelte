@@ -22,6 +22,7 @@
   import { num } from './num';
 
   type Range = 'all' | 30 | 14;
+  const wide = typeof matchMedia === 'function' && matchMedia('(min-width: 900px)').matches;
   const RANGES: [Range, string][] = [
     ['all', 'Mission'],
     [30, '30 days'],
@@ -115,6 +116,8 @@
         {/each}
       </div>
     </header>
+    <details class="how" open={wide}>
+      <summary>How to read the charts</summary>
     <div class="legend">
       <span><i class="d"></i>Daily value</span>
       <span><i></i>{MEAN_WINDOW_DAYS}-day mean</span>
@@ -132,7 +135,9 @@
       {#if catalog.failed}
         <span class="err">Rules unavailable: the chart shows no rule threshold.</span>
       {/if}
+      Touch or point at a chart to see the value of a day.
     </p>
+    </details>
     <label class="pick">
       <span class="lbl">Indicator</span>
       <select
@@ -202,6 +207,7 @@
               thresholds={thresholdsOf(id)}
               minSpan={MIN_SPAN[info.unit] ?? 1}
               until={range === 'all' ? MISSION_DAYS : null}
+              format={(v) => formatValue(id, v)}
             />
           {/key}
         {:else}
@@ -225,6 +231,40 @@
 </div>
 
 <style>
+  .how {
+    display: grid;
+    gap: 12px;
+  }
+  .how summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    min-height: 32px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .how summary::-webkit-details-marker {
+    display: none;
+  }
+  .how summary::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform var(--t-fast) var(--ease-out);
+  }
+  .how[open] summary::after {
+    transform: translateY(1px) rotate(-135deg);
+  }
+  .how[open] > :not(summary) {
+    animation: rise-in 240ms var(--ease-out) backwards;
+  }
   .intro .formula {
     max-width: 88ch;
   }

@@ -144,6 +144,13 @@ code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-
   transition: transform var(--t-mid) var(--ease-out), box-shadow var(--t-mid) var(--ease-out);
 }
 @media (hover: hover) { .card.lift:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 var(--line), 0 0 0 1px var(--line-2), var(--shadow); } }
+@media (max-width: 520px) {
+  .card { padding: 18px 18px 20px; gap: 18px; border-radius: calc(var(--r) - 4px); }
+}
+@media (pointer: coarse) {
+  .seg button { min-height: 40px; }
+  button, .btn, summary { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+}
 .card > header, .ch { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .ttl { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .well { padding: 14px 16px; border-radius: 18px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
@@ -191,12 +198,13 @@ code { font-family: var(--font-data); font-size: 11.5px; background: var(--well-
 .btn svg { width: 16px; height: 16px; flex: none; }
 .btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
-.seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 14px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
+.seg { display: inline-flex; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; gap: 2px; padding: 3px; border-radius: 14px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); }
 .seg button {
-  border: 0; background: transparent; color: var(--muted); font-weight: 500; font-size: 13.5px; padding: 6px 14px; min-height: 34px;
+  flex: none; white-space: nowrap; border: 0; background: transparent; color: var(--muted); font-weight: 500; font-size: 13.5px; padding: 6px 14px; min-height: 34px;
   border-radius: 11px; cursor: pointer; transition: color var(--t-fast), background-color var(--t-fast), transform var(--t-fast) var(--ease-out);
 }
 @media (hover: hover) { .seg button:hover { color: var(--fg); } }
+.seg::-webkit-scrollbar { display: none; }
 .seg button:active { transform: scale(0.97); }
 .seg button[aria-pressed='true'] {
   color: var(--fg); background: linear-gradient(180deg, var(--raise-a), var(--raise-b));
