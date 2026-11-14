@@ -10,6 +10,7 @@
   import LevelIcon from '../../lib/LevelIcon.svelte';
   import { addDays } from '../../lib/mission';
   import { app, navigate, refresh } from '../../lib/state.svelte';
+  import Ticker from '../../lib/Ticker.svelte';
   import {
     LEVELS,
     SEVERITY_MAX,
@@ -45,6 +46,9 @@
   const selected = $derived(regions.find((r) => r.region === app.route.region) ?? null);
   const levels = $derived(Object.fromEntries(regions.map((r) => [r.region, r.level])));
   const flagged = $derived(regions.filter((r) => FLAGGED.includes(r.level)).length);
+  const counts = $derived(
+    Object.fromEntries(LEVELS.map((l) => [l, regions.filter((r) => r.level === l).length])),
+  );
   const regionSymptoms = $derived(
     selected
       ? (history ?? selected.symptoms.map((symptom) => ({ day: app.assessment!.mission_day, today: true, symptom })))
@@ -135,28 +139,36 @@
     <section class="card figcard" aria-labelledby="b-f">
       <header>
         <h2 id="b-f">Front and back</h2>
-        <span class="eyebrow">Only a flagged region takes a colour</span>
+        <span class="eyebrow">
+          Data of {missionDayLabel(app.assessment.mission_day).toLowerCase()}
+        </span>
       </header>
-      <DotFigure
-        {levels}
-        selected={selected?.region ?? null}
-        highlight={hover}
-        onpick={(z) => select(z)}
-      />
-      <div class="foot">
-        <p class="small muted">
-          Data of {missionDayLabel(app.assessment.mission_day).toLowerCase()}. The Tab key moves
-          between regions.
-        </p>
-        <ul class="legend" aria-label="Levels">
-          {#each LEVELS as level (level)}
-            <li data-lv={level}><LevelIcon state={level} size={8} />{STATE_LABEL[level]}</li>
-          {/each}
-        </ul>
+      <div class="stage">
+        <DotFigure
+          {levels}
+          selected={selected?.region ?? null}
+          highlight={hover}
+          onpick={(z) => select(z)}
+          onhover={(z) => (hover = z)}
+        />
       </div>
+      <ul class="legend" aria-label="Number of regions at each level">
+        {#each LEVELS as level (level)}
+          <li data-lv={level} class:none={!counts[level]}>
+            <span class="lg-l"><LevelIcon state={level} size={9} />{STATE_LABEL[level]}</span>
+            <span class="lg-n">
+              <Ticker value={counts[level]} /><small>{counts[level] === 1 ? 'region' : 'regions'}</small>
+            </span>
+          </li>
+        {/each}
+      </ul>
+      <p class="small muted hint">
+        Only a flagged region takes a colour. Press Tab to move between regions. Press Enter to
+        open a region.
+      </p>
     </section>
 
-    <section class="card" aria-labelledby="b-p">
+    <section class="card side" aria-labelledby="b-p">
       {#if selected}
         {#key selected.region}
           <div class="panel">
@@ -291,6 +303,7 @@
             <button
               type="button"
               class="rbtn rise"
+              class:hl={hover === r.region}
               style:--i={i}
               data-lv={r.level}
               onclick={() => select(r.region)}
@@ -314,27 +327,90 @@
 {/if}
 
 <style>
-  .foot {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px 16px;
+  .stage {
+    margin: -4px -12px 0;
+    padding: 16px 10px 6px;
+    border-radius: 20px;
+    background:
+      radial-gradient(
+        ellipse 30% 46% at 50% 46%,
+        color-mix(in srgb, var(--fg) 6%, transparent),
+        transparent
+      ),
+      var(--well);
+    box-shadow: inset 0 0 0 1px var(--line);
+    --fig-bg: var(--well);
   }
   .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 14px;
-    font-size: 12.5px;
-    color: var(--muted);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
   }
   .legend li {
-    display: inline-flex;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
+    min-width: 0;
+    padding: 11px 12px 10px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--lc) 9%, var(--well));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lc) 20%, var(--line));
+    transition:
+      background-color var(--t-slow) var(--ease-out),
+      box-shadow var(--t-slow) var(--ease-out);
   }
-  .legend li :global(.lvicon) {
+  .legend li.none,
+  .legend li[data-lv='ok'] {
+    background: var(--well);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .lg-l {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .lg-l :global(.lvicon) {
     color: var(--lc);
+  }
+  .lg-n {
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .lg-n small {
+    margin-left: 6px;
+    font-size: 12.5px;
+    font-weight: 400;
+    letter-spacing: -0.006em;
+    color: var(--muted);
+  }
+  .legend li.none .lg-n {
+    color: var(--faint);
+  }
+  .legend li.none .lg-n small {
+    color: var(--faint);
+  }
+  .hint {
+    max-width: none;
+  }
+  .figcard,
+  .side {
+    container-type: inline-size;
+  }
+  @container (max-width: 500px) {
+    .legend {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @container (max-width: 400px) {
+    .rlist {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .panel {
@@ -431,8 +507,12 @@
       background-color var(--t-fast) var(--ease-out),
       transform var(--t-fast) var(--ease-out);
   }
-  .rbtn:hover {
+  .rbtn:hover,
+  .rbtn.hl {
     background: var(--well-2);
+  }
+  .rbtn.hl {
+    box-shadow: inset 0 0 0 1px var(--line-2);
   }
   .rbtn:active {
     transform: scale(0.97);
@@ -453,7 +533,6 @@
     background: var(--lc);
   }
   @media (max-width: 420px) {
-    .rlist,
     .two {
       grid-template-columns: minmax(0, 1fr);
     }
