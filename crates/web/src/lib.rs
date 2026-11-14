@@ -152,6 +152,7 @@ impl Session {
                 to_value(scenario::info(id))
             }
             "get_settings" => to_value(self.doc.settings.clone()),
+            "rules" => to_value(rules::catalog(rules)),
             "set_settings" => {
                 let settings: Settings = arg(args, "settings")?;
                 validate::settings(&settings)?;
@@ -263,6 +264,10 @@ mod tests {
         let refused = send("save_daily_check", json!({ "check": bad }), &doc);
         assert_eq!(refused["error"]["kind"], "validation");
         assert!(refused.get("doc").is_none());
+
+        let catalog = send("rules", Value::Null, &doc);
+        assert!(catalog.get("ok").is_some_and(|v| !v.is_null()));
+        assert!(catalog.get("doc").is_none());
 
         let packet = send("export_packet", json!({ "path": "p.json" }), &doc);
         assert_eq!(packet["ok"]["path"], "p.json");
