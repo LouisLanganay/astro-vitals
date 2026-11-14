@@ -156,8 +156,17 @@
   <header class="top">
     <span class="mark">
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle class="pl" cx="12" cy="12" r="4.6" />
-        <ellipse cx="12" cy="12" rx="10.2" ry="4" transform="rotate(-24 12 12)" />
+        <path class="back" d="M1.8 12A10.2 4 0 0 1 22.2 12" transform="rotate(-24 12 12)" />
+        <g class="pl">
+          <circle cx="12" cy="12" r="1.65" />
+          <circle cx="15.75" cy="12" r="1.6" />
+          <circle cx="13.88" cy="15.25" r="1.6" />
+          <circle cx="10.13" cy="15.25" r="1.6" />
+          <circle class="hi" cx="8.25" cy="12" r="1.6" />
+          <circle class="hi" cx="10.13" cy="8.75" r="1.6" />
+          <circle cx="13.88" cy="8.75" r="1.6" />
+        </g>
+        <path d="M22.2 12A10.2 4 0 0 1 1.8 12" transform="rotate(-24 12 12)" />
       </svg>
     </span>
     <span class="name">
@@ -345,10 +354,17 @@
     fill: none;
     stroke: var(--fg);
     stroke-width: 1.6;
+    stroke-linecap: round;
   }
   .mark svg .pl {
     fill: var(--ui);
     stroke: none;
+  }
+  .mark svg .hi {
+    fill: color-mix(in srgb, var(--fg) 45%, var(--ui));
+  }
+  .mark svg .back {
+    opacity: 0.35;
   }
   .name b {
     display: block;
