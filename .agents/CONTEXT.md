@@ -34,13 +34,14 @@ All data stays on the device. Specification: [SPEC.md](./SPEC.md). Evidence: [RE
 - `app/src/App.svelte`, `app/src/app.css`: navigation shell, banners, shared CSS.
 - `app/src/screens/daily/`: Home, DailyCheck, Trends, Settings, PacketExport.
 - `app/src/screens/tests/`: Pvt, VisionTest, BodyFigure.
+- `app/src/landing/`: the welcome page of the web demo. `gate.ts` decides if it shows, `run.ts` mounts it, `ship.ts` builds the dot spacecraft, `scene.ts` draws it with WebGL (no library) and flies the camera into the airlock.
 - `.agents/`: files for agents. Area guide: [CONTRACTS.md](./CONTRACTS.md) gives the meaning of each frozen contract.
 - `.agents/fleet/SETUP.md`: setup of `/fleet` sessions.
 
 ## Entry points
 
 - `app/src-tauri/src/main.rs`: the Tauri binary.
-- `app/src/main.ts`: the frontend. It mounts `App.svelte`.
+- `app/src/main.ts`: the frontend. It mounts `App.svelte`. In `web` mode, it shows the landing first, one time for each browser tab. `#landing` forces it, `#app` skips it.
 - `app/index.html`: the Vite entry.
 
 ## Conventions
