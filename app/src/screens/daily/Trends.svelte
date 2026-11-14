@@ -22,7 +22,6 @@
   import { num } from './num';
 
   type Range = 'all' | 30 | 14;
-  const wide = typeof matchMedia === 'function' && matchMedia('(min-width: 900px)').matches;
   const RANGES: [Range, string][] = [
     ['all', 'Mission'],
     [30, '30 days'],
@@ -107,7 +106,7 @@
 <div class="stack">
   <section class="card intro" aria-labelledby="tr-h">
     <header>
-      <h2 id="tr-h">Each indicator against your own baseline</h2>
+      <h2 id="tr-h">Against your baseline</h2>
       <div class="seg" role="group" aria-label="Time range">
         {#each RANGES as [value, text] (value)}
           <button type="button" aria-pressed={range === value} onclick={() => (range = value)}>
@@ -116,8 +115,6 @@
         {/each}
       </div>
     </header>
-    <details class="how" open={wide}>
-      <summary>How to read the charts</summary>
     <div class="legend">
       <span><i class="d"></i>Daily value</span>
       <span><i></i>{MEAN_WINDOW_DAYS}-day mean</span>
@@ -125,6 +122,8 @@
       <span><i class="t"></i>Rule threshold</span>
       <span><i class="p"></i>Pre-flight days</span>
     </div>
+    <details class="how">
+      <summary>How to read the charts</summary>
     <p class="small muted formula">
       Baseline: median of the {BASELINE_DAYS} pre-flight days. Drift score = (7-day mean minus
       baseline median) / (1.4826 x MAD), counted in the bad direction only.
@@ -135,12 +134,11 @@
       {#if catalog.failed}
         <span class="err">Rules unavailable: the chart shows no rule threshold.</span>
       {/if}
-      Touch or point at a chart to see the value of a day.
     </p>
     </details>
     <label class="pick">
-      <span class="lbl">Indicator</span>
       <select
+        aria-label="Indicator"
         value={app.route.indicator ?? ''}
         onchange={(e) =>
           navigate('trends', { indicator: (e.currentTarget.value || null) as Indicator | null })}
@@ -166,7 +164,18 @@
             <span class="ic"><Icon name={ICON[id]} size={17} /></span>
             <h3 id="tr-{id}">{info.label}</h3>
           </div>
-          <LevelBadge state={st} />
+          <div class="end">
+            <LevelBadge state={st} />
+            {#if shown.length > 1}
+              <button
+                class="btn ghost sm icon"
+                aria-label="Show only this indicator: {info.label}"
+                onclick={() => navigate('trends', { indicator: id })}
+              >
+                <Icon name="focus" size={15} />
+              </button>
+            {/if}
+          </div>
         </div>
 
         {#if !result}
@@ -214,13 +223,7 @@
           <p class="banner error" role="alert">{errorText(result)}</p>
         {/if}
 
-        {#if shown.length > 1}
-          <div class="foot">
-            <button class="btn ghost sm" onclick={() => navigate('trends', { indicator: id })}>
-              Show only this indicator
-            </button>
-          </div>
-        {:else}
+        {#if shown.length === 1}
           <div class="foot">
             <button class="btn ghost sm" onclick={() => navigate('trends')}>Show all indicators</button>
           </div>
@@ -272,8 +275,10 @@
     display: grid;
     max-width: 320px;
   }
-  .pick .lbl {
-    margin-bottom: 6px;
+  .end {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   .legend {
     display: flex;

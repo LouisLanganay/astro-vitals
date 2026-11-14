@@ -87,6 +87,7 @@
     status: 'done' | 'due' | 'optional';
     title: string;
     sub: string;
+    meta: IconName | null;
     label: string;
     go: () => void;
   }
@@ -108,7 +109,8 @@
         icon: 'check',
         status: checkDone ? 'done' : 'due',
         title: 'Daily check',
-        sub: checkDone ? 'Done for today. A new save replaces it.' : 'Due. About 2 minutes.',
+        sub: checkDone ? 'Done' : '2 min',
+        meta: checkDone ? null : 'clock',
         label: checkDone ? 'Edit' : 'Start',
         go: () => navigate('daily_check'),
       },
@@ -118,8 +120,9 @@
         status: pvt ? 'done' : 'optional',
         title: 'PVT-B reaction test',
         sub: pvt
-          ? `Done: mean ${pvt.mean_rt_ms ?? 'no'} ms, ${pvt.lapses} ${pvt.lapses === 1 ? 'lapse' : 'lapses'}.`
-          : 'Optional, 3 minutes.',
+          ? `${pvt.mean_rt_ms ?? 'no'} ms, ${pvt.lapses} ${pvt.lapses === 1 ? 'lapse' : 'lapses'}`
+          : '3 min',
+        meta: pvt ? null : 'clock',
         label: pvt ? 'Repeat' : 'Start',
         go: () => navigate('pvt'),
       },
@@ -130,11 +133,12 @@
         title: 'Vision test',
         sub: visionDue
           ? lastVision
-            ? `Due: the last test was on day ${lastVision.mission_day}.`
-            : 'No test yet. Due now.'
+            ? `Last test: day ${lastVision.mission_day}`
+            : 'No test yet'
           : lastVision
-            ? `Last test on day ${lastVision.mission_day}. Next on day ${lastVision.mission_day + 7}.`
-            : 'Not due today.',
+            ? `Day ${lastVision.mission_day + 7}`
+            : 'Not due',
+        meta: !visionDue && lastVision ? 'calendar' : null,
         label: visionDue ? 'Start' : 'Open',
         go: () => navigate('vision'),
       },
@@ -173,9 +177,6 @@
             <span class="ic lvic"><LevelIcon state={gaugeState} size={11} /></span>
             <h2 id="h-lv">Today's level</h2>
           </div>
-          <span class="eyebrow">
-            {fired.length ? `${fired.length} ${fired.length > 1 ? 'rules' : 'rule'} fired` : 'No rule fired'}
-          </span>
         </header>
         {#if assessment}
           <div class="lvcard">
@@ -195,9 +196,9 @@
             <Gauge state={gaugeState} />
           </div>
           {#if missing.length}
-            <p class="small muted">
-              Not enough data yet for: {missing.join(', ')}. A rule fires only when its window
-              has enough days with data.
+            <p class="small muted meta">
+              <LevelIcon state="not_enough_data" size={9} />
+              Not enough data: {missing.join(', ')}
             </p>
           {/if}
         {:else if app.loading}
@@ -206,10 +207,6 @@
           <p class="muted">The assessment is not available.</p>
         {/if}
         <div class="strip-wrap">
-          <div class="ch">
-            <span class="eyebrow">Mission so far, one cell for each day</span>
-            <span class="eyebrow num">day {mission.mission_day}/{MISSION_DAYS}</span>
-          </div>
           <svg
             class="strip"
             viewBox="0 0 {STRIP_W} 36"
@@ -258,18 +255,28 @@
               >
                 <Icon name={t.icon} size={17} />
               </span>
-              <span><b>{t.title}</b><span class="sub">{t.sub}</span></span>
-              <button class="btn sm" class:primary={t.status === 'due'} onclick={t.go}>
-                {t.label}
+              <span>
+                <b>{t.title}</b>
+                <span class="sub">
+                  {#if t.meta}<Icon name={t.meta} size={13} />{/if}
+                  {t.sub}
+                </span>
+              </span>
+              <button
+                class="btn sm icon"
+                class:primary={t.status === 'due'}
+                onclick={t.go}
+                aria-label="{t.label}: {t.title}"
+              >
+                <Icon name="chevron" size={16} />
               </button>
             </li>
           {/each}
         </ul>
         <div class="streak">
+          <span class="ic"><Icon name="flame" size={17} /></span>
           <span class="big"><Ticker value={mission.streak} /></span>
-          <span class="small muted">
-            {mission.streak === 1 ? 'day' : 'days'} in a row with a completed daily check
-          </span>
+          <span class="small muted">{mission.streak === 1 ? 'day' : 'days'} in a row</span>
         </div>
       </section>
     </div>
@@ -290,8 +297,6 @@
             <span>{v.name}</span>
             {#if FLAGGED.includes(st)}
               <LevelBadge state={st} />
-            {:else}
-              <span class="scale">Last {BAR_DAYS} days</span>
             {/if}
           </span>
           <span class="vb">
@@ -338,7 +343,8 @@
                     class="btn sm"
                     onclick={() => navigate('trends', { indicator: subject.value })}
                   >
-                    Show the trend
+                    <Icon name="trends" size={14} />
+                    Trend
                   </button>
                 {/if}
               </FiredRuleCard>
@@ -352,17 +358,16 @@
             </div>
           {/if}
         {:else}
-          <p class="muted">
-            No rule fired. Each rule compares your last days with a limit or with your own
-            pre-flight baseline.
-          </p>
+          <p class="muted">No rule fired.</p>
         {/if}
       </section>
 
       <section class="card" aria-labelledby="h-bd">
         <header>
           <h2 id="h-bd">Body</h2>
-          <button class="btn sm" onclick={() => navigate('body')}>Open</button>
+          <button class="btn sm icon" onclick={() => navigate('body')} aria-label="Open the Body screen">
+            <Icon name="chevron" size={16} />
+          </button>
         </header>
         <BodyMini
           levels={Object.fromEntries((assessment?.regions ?? []).map((r) => [r.region, r.level]))}
@@ -454,9 +459,6 @@
   .strip-wrap {
     margin-top: auto;
   }
-  .strip-wrap .ch {
-    margin-bottom: 10px;
-  }
   .strip {
     display: block;
     width: 100%;
@@ -492,15 +494,25 @@
     font-weight: 500;
   }
   .task .sub {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 5px;
     font-size: 12.5px;
     color: var(--muted);
   }
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .streak {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 12px;
     margin-top: auto;
+  }
+  .streak .ic {
+    color: var(--orange);
   }
   .streak .big {
     font-size: 40px;
@@ -537,10 +549,6 @@
   }
   .vh > span:first-child {
     font-size: 15px;
-  }
-  .scale {
-    font-size: 13px;
-    color: var(--muted);
   }
   .vb {
     display: grid;

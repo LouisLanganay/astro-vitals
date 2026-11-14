@@ -52,6 +52,7 @@
     key: NumberKey;
     label: string;
     short: string;
+    icon: IconName;
     help: string;
     step: string;
     unit: string;
@@ -63,6 +64,7 @@
       key: 'fluid_l',
       label: 'Fluid intake (litres)',
       short: 'Fluid intake',
+      icon: 'drop',
       help: 'The sum of all drinks of the day.',
       step: '0.1',
       unit: 'L',
@@ -74,6 +76,7 @@
       key: 'exercise_resistive_min',
       label: 'Resistive exercise (minutes)',
       short: 'Resistive exercise',
+      icon: 'dumbbell',
       help: 'Exercise against a load. It keeps muscle and bone.',
       step: '1',
       unit: 'min',
@@ -85,6 +88,7 @@
       key: 'exercise_aerobic_min',
       label: 'Aerobic exercise (minutes)',
       short: 'Aerobic exercise',
+      icon: 'pulse',
       help: 'Treadmill or cycle exercise. It keeps the heart and the lungs fit.',
       step: '1',
       unit: 'min',
@@ -321,7 +325,7 @@
       <span class="ic"><Icon name={icon} size={17} /></span>
       <h2 id={id}>{title}</h2>
     </div>
-    <span class="eyebrow">{note}</span>
+    {#if note}<span class="eyebrow">{note}</span>{/if}
   </header>
 {/snippet}
 
@@ -393,7 +397,7 @@
         />
       {/if}
     </label>
-    <span class="help" id="h-{field}">{help}</span>
+    <span class="sr" id="h-{field}">{help}</span>
     {@render fieldError(field)}
   </div>
 {/snippet}
@@ -412,9 +416,7 @@
         }}
       />
     </label>
-    <p class="small muted">
-      {view ? `${missionDayLabel(view.mission_day)}. ` : ''}Select a past day to correct its check.
-    </p>
+    {#if view}<p class="small muted">{missionDayLabel(view.mission_day)}</p>{/if}
     {@render fieldError('date')}
   </div>
 
@@ -432,7 +434,7 @@
     <form class="grid g-2" novalidate onsubmit={save}>
       <div class="stack">
         <section class="card rise" style:--i={0} aria-labelledby="dc-sleep">
-          {@render head('dc-sleep', SECTION_ICON.sleep, 'Sleep last night', '24-hour clock')}
+          {@render head('dc-sleep', SECTION_ICON.sleep, 'Sleep last night', '')}
           <div class="times">
             {@render timeBox('answers.sleep_start_min', 'Sleep start', 'The time when you fell asleep.', true)}
             {@render timeBox('answers.sleep_end_min', 'Sleep end', 'The time when you woke up.', false)}
@@ -456,13 +458,12 @@
               <input type="checkbox" bind:checked={sleepAid} />
               <span>Sleep aid taken</span>
             </label>
-            <span class="help">Set this if you took a medication to sleep.</span>
             {@render fieldError('answers.sleep_aid')}
           </div>
         </section>
 
         <section class="card rise" style:--i={1} aria-labelledby="dc-feel">
-          {@render head('dc-feel', SECTION_ICON.feel, 'How you feel', '0 to 10')}
+          {@render head('dc-feel', SECTION_ICON.feel, 'How you feel', '')}
           <div class="scales">
             {#each SCALES as def (def.key)}
               {@render scale(def)}
@@ -473,13 +474,14 @@
 
       <div class="stack">
         <section class="card rise" style:--i={2} aria-labelledby="dc-fluid">
-          {@render head('dc-fluid', SECTION_ICON.fluid, 'Fluid and exercise', 'Last 24 hours')}
+          {@render head('dc-fluid', SECTION_ICON.fluid, 'Fluid and exercise', '')}
           <div class="steps3">
             {#each NUMBERS as def (def.key)}
               {@const field = `answers.${def.key}`}
               <div class="fld">
                 <div class="step" class:bad={invalid(field)}>
                   <label for="dc-{def.key}">
+                    <Icon name={def.icon} size={14} />
                     {def.short}<span class="sr"> {def.label.slice(def.short.length)}</span>
                   </label>
                   <div class="sv">
@@ -517,7 +519,7 @@
                     </button>
                   </div>
                 </div>
-                <span class="help" id="h-{def.key}">{def.help}</span>
+                <span class="sr" id="h-{def.key}">{def.help}</span>
                 {@render fieldError(field)}
               </div>
             {/each}
@@ -531,10 +533,6 @@
             'Symptoms',
             symptoms.length ? `${symptoms.length} logged` : 'None logged',
           )}
-          <p class="small muted">
-            Record each symptom that you have on this day. Set "Treated" if you took a treatment.
-            Then tell if the symptom improved.
-          </p>
           {#if symptoms.length}
             <ul class="syms">
               {#each symptoms as symptom, i (symptom)}
@@ -545,11 +543,21 @@
                     <span class="s">{symptomText(symptom)}</span>
                   </span>
                   <span class="btns">
-                    <button type="button" class="btn ghost sm" onclick={() => editSymptom(i)}>
-                      Edit
+                    <button
+                      type="button"
+                      class="btn ghost sm icon"
+                      aria-label="Edit the symptom: {SYMPTOM_LABEL[symptom.kind]}"
+                      onclick={() => editSymptom(i)}
+                    >
+                      <Icon name="edit" size={15} />
                     </button>
-                    <button type="button" class="btn ghost sm" onclick={() => symptoms.splice(i, 1)}>
-                      Remove
+                    <button
+                      type="button"
+                      class="btn ghost sm icon"
+                      aria-label="Remove the symptom: {SYMPTOM_LABEL[symptom.kind]}"
+                      onclick={() => symptoms.splice(i, 1)}
+                    >
+                      <Icon name="trash" size={15} />
                     </button>
                   </span>
                   <span class="errs">
@@ -617,13 +625,16 @@
               </div>
             {/if}
             <div class="full">
-              <button type="button" class="btn" onclick={addSymptom}>Add the symptom</button>
+              <button type="button" class="btn" onclick={addSymptom}>
+                <Icon name="plus" size={15} />
+                Add the symptom
+              </button>
             </div>
           </div>
         </section>
 
         <section class="card rise" style:--i={4} aria-labelledby="dc-flags">
-          {@render head('dc-flags', SECTION_ICON.flags, 'Red flags', 'Set each sign that you have')}
+          {@render head('dc-flags', SECTION_ICON.flags, 'Red flags', '')}
           <div class="flags">
             {#each RED_FLAG_KINDS as kind (kind)}
               <label class="tog rf">
@@ -640,7 +651,9 @@
           <div class="savebar">
             <div>
               <b>{view.check.answers || savedOk ? `Saved for ${missionDayLabel(view.mission_day).toLowerCase()}` : 'Not saved yet'}</b>
-              <div class="small muted hint">A second save for the same day replaces the first.</div>
+              {#if view.check.answers || savedOk}
+                <div class="small muted hint">A new save replaces it.</div>
+              {/if}
             </div>
             <button
               type="submit"
@@ -654,7 +667,7 @@
                 </svg>
                 Saved
               {:else}
-                {saving ? 'Saving...' : 'Save the daily check'}
+                {saving ? 'Saving...' : 'Save'}
               {/if}
             </button>
           </div>
@@ -718,10 +731,6 @@
     font-weight: 400;
     letter-spacing: 0;
     margin-left: 4px;
-  }
-  .help {
-    color: var(--faint);
-    font-size: 12.5px;
   }
   .error {
     color: var(--red);
@@ -905,6 +914,9 @@
     box-shadow: inset 0 0 0 1.5px var(--ui);
   }
   .step label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 12.5px;
     color: var(--muted);
   }

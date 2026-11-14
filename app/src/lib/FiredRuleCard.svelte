@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from './Icon.svelte';
   import LevelBadge from './LevelBadge.svelte';
   import LevelIcon from './LevelIcon.svelte';
   import { isUrl, ruleFact, ruleTitle, sourceLabel } from './rules';
@@ -27,12 +28,14 @@
   {/if}
   <p class="why">{rule.explanation}</p>
   <p class="src">
+    <Icon name="link" size={13} />
     {#if isUrl(rule.source)}
-      Source: <a href={rule.source} target="_blank" rel="noopener noreferrer">{sourceLabel(rule.source)}</a>
+      <a href={rule.source} target="_blank" rel="noopener noreferrer" aria-label="Source: {sourceLabel(rule.source)}">
+        {sourceLabel(rule.source)}
+      </a>
     {:else}
-      Source: {rule.source}
+      {rule.source}
     {/if}
-    <code>{rule.rule_id}</code>
   </p>
   {#if children}
     <div class="btns">{@render children()}</div>

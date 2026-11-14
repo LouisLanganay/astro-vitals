@@ -1,8 +1,8 @@
 <script lang="ts">
-  const WEB = import.meta.env.MODE === 'web';
   import { exportPacket, pickExportPath } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
   import { missionDayLabel } from '../../lib/format';
+  import Icon from '../../lib/Icon.svelte';
   import { INDICATOR_INFO, RED_FLAG_LABEL, REGION_LABEL, SYMPTOM_LABEL } from '../../lib/labels';
   import LevelBadge from '../../lib/LevelBadge.svelte';
   import { ruleFact, ruleTitle } from '../../lib/rules';
@@ -116,11 +116,6 @@
           >
             <i style:transform="scaleX({ratio})"></i>
           </div>
-          <span class="small muted">
-            {preview.bytes} bytes. {over
-              ? `Over the limit of ${PACKET_MAX_BYTES} bytes.`
-              : `Under the limit of ${PACKET_MAX_BYTES} bytes.`}
-          </span>
           {#if over}
             <p class="banner warn" role="alert">The packet is larger than the limit.</p>
           {/if}
@@ -132,7 +127,7 @@
           </div>
           <div class="tile rise" style:--i={2}>
             <b><Ticker value={packet.flagged.length} /></b>
-            <span>Flagged indicators, with {PACKET_WINDOW_DAYS} days of values</span>
+            <span>Flagged indicators</span>
           </div>
           <div class="tile rise" style:--i={3}>
             <b><Ticker value={packet.symptoms.length} /></b>
@@ -155,7 +150,8 @@
             </svg>
             Exported. Export again
           {:else}
-            {exporting ? 'Exporting...' : 'Export the packet'}
+            {#if !exporting}<Icon name="export" size={17} />{/if}
+            {exporting ? 'Exporting...' : 'Export'}
           {/if}
         </button>
         {#if message}
@@ -164,16 +160,15 @@
         {#if exportError}
           <p class="banner error" role="alert">The export failed. {errorText(exportError)}</p>
         {/if}
-        <p class="small muted">
-          The packet is a summary for the flight surgeon on Earth. It is one JSON file.
-          {WEB ? 'The browser downloads the file.' : 'The application asks for the file path.'}
-        </p>
       </section>
 
       <section class="card rise" style:--i={1} aria-labelledby="x-c">
         <header>
           <h2 id="x-c">Packet content</h2>
-          <span class="eyebrow">Nothing leaves this device until you export it</span>
+          <span class="eyebrow lock">
+            <Icon name="lock" size={13} />
+            Nothing leaves this device until you export it
+          </span>
         </header>
         {#key preview.json}
           <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -187,7 +182,7 @@
     <section class="card rise" style:--i={2} aria-labelledby="x-p">
       <header>
         <h2 id="x-p">The same packet in plain words</h2>
-        <span class="eyebrow">The oldest day is first. "-" shows a day with no data.</span>
+        <span class="eyebrow">"-" = no data</span>
       </header>
       <div class="plain">
         <div>

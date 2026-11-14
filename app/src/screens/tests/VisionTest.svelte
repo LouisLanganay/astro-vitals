@@ -201,12 +201,6 @@
 {:else if step === 'calibrate' || !calibration}
   <div class="grid g-7-5">
     <div class="stack">
-      {#if !calibration}
-        <p class="banner warn" role="alert">
-          The vision test cannot start without a calibration: the size of the letters depends on
-          your screen.
-        </p>
-      {/if}
       {#if error}
         <p class="banner error" role="alert">The calibration was not saved. {errorText(error)}</p>
       {/if}
@@ -236,7 +230,7 @@
     <section class="card" aria-labelledby="v-s">
       <header>
         <h2 id="v-s">Eye {eyeIndex + 1} of {EYES.length}</h2>
-        <button class="btn ghost sm" onclick={() => (step = 'intro')}>Stop the test</button>
+        <button class="btn ghost sm" onclick={() => (step = 'intro')}>Stop</button>
       </header>
       {@render stepList()}
     </section>
@@ -261,19 +255,13 @@
         </div>
         <span class="eyebrow">{due ? 'Due now' : 'Not due today'}</span>
       </header>
-      <p>
-        One test each week, one eye at a time. Hold the screen at {VIEWING_DISTANCE_CM} cm. Long
-        spaceflight can change the eyes.
-      </p>
+      <p>One eye at a time. Hold the screen at {VIEWING_DISTANCE_CM} cm.</p>
       {@render stepList()}
-      {#if due}
-        <p class="banner info">The weekly vision test is due.</p>
-      {/if}
       <div class="btns">
         <button class="btn primary" onclick={start}>
-          {shown ? 'Start the test again' : 'Start the test'}
+          {shown ? 'Start again' : 'Start'}
         </button>
-        <button class="btn" onclick={() => (step = 'calibrate')}>Do the calibration again</button>
+        <button class="btn" onclick={() => (step = 'calibrate')}>Calibrate again</button>
       </div>
       {#if shown}
         <p class="small muted">A new test replaces the result of today.</p>
@@ -295,7 +283,7 @@
           {#if step === 'done'}
             <div class="btns">
               <button class="btn primary" onclick={() => navigate('home')}>
-                Go to the home screen
+                Go to Today
               </button>
             </div>
           {/if}
@@ -307,8 +295,6 @@
           <li>Put your eyes {VIEWING_DISTANCE_CM} cm from the screen. Measure the distance.</li>
           <li>Use the same light and the same glasses each week.</li>
           <li>Cover the other eye with your hand.</li>
-          <li>Near acuity: tell the direction of the letter E. The letter becomes smaller.</li>
-          <li>Amsler grid: look at the center dot and tell if the lines are straight.</li>
         </ol>
       </section>
     </div>

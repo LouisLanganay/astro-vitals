@@ -55,7 +55,6 @@
   const all = $derived(catalog.value?.rules ?? []);
   const ordered = $derived([...all.filter((r) => firedById.has(r.id)), ...all.filter((r) => !firedById.has(r.id))]);
   const rules = $derived(filter === 'all' ? ordered : ordered.filter((r) => r.level === filter));
-  const drift = $derived(catalog.value?.drift ?? null);
   loadCatalog();
   const indicators = $derived(app.assessment?.indicators ?? []);
 
@@ -138,14 +137,11 @@
     <header>
       <div>
         <h2 id="st-r">
-          {all.length || ''} {all.length === 1 ? 'rule' : 'rules'}, each with a source
+          {all.length || ''} {all.length === 1 ? 'rule' : 'rules'}
         </h2>
         <p class="small muted sub">
-          A rule marked as a design selection needs a medical review.
-          {#if drift}
-            Drift levels: a score of {drift.self_care} or more is self-care, {drift.tell_cmo} or more is tell the CMO.
-          {/if}
-          {fired.length} {fired.length === 1 ? 'rule fires' : 'rules fire'} today.
+          {fired.length} {fired.length === 1 ? 'rule fires' : 'rules fire'} today. A rule marked as a
+          design selection needs a medical review.
         </p>
       </div>
       <div class="seg" role="group" aria-label="Filter by level">
@@ -247,10 +243,6 @@
             </tbody>
           </table>
         </div>
-        <p class="small muted">
-          The baseline is the median and the MAD of the pre-flight days. The drift score needs
-          7 pre-flight days or more.
-        </p>
       {:else}
         <p class="muted">No baseline yet.</p>
       {/if}
@@ -271,10 +263,7 @@
               bind:value={launchDate}
               aria-invalid={fieldMessage(error, 'launch_date') ? 'true' : undefined}
             />
-            <span class="help">
-              The launch date is mission day 0. The days before it are pre-flight days. They give
-              your baseline.
-            </span>
+            <span class="help">Mission day 0.</span>
             {@render fieldError('launch_date')}
           </label>
           <label class="field">
@@ -287,19 +276,13 @@
               bind:value={prescription}
               aria-invalid={fieldMessage(error, 'exercise_prescription_min') ? 'true' : undefined}
             />
-            <span class="help">
-              The sum of resistive and aerobic exercise that you must do each day. The exercise rule
-              compares your mean for 7 days with this value.
-            </span>
+            <span class="help">The sum of resistive and aerobic exercise.</span>
             {@render fieldError('exercise_prescription_min')}
           </label>
           <div class="row">
             <button type="submit" class="btn primary" class:ok={saved} disabled={saving || loading}>
-              {saving ? 'Saving...' : saved ? 'Saved' : 'Save the settings'}
+              {saving ? 'Saving...' : saved ? 'Saved' : 'Save'}
             </button>
-            {#if saved}
-              <span class="small muted pop" role="status">The settings are saved.</span>
-            {/if}
           </div>
         </form>
       {:else if loading}
@@ -313,8 +296,7 @@
       <section class="card rise" style:--i={3} aria-labelledby="st-sc">
         <header><h2 id="st-sc">Load a scenario</h2></header>
         <p class="small muted">
-          A scenario is a prepared mission for a demonstration. It replaces all stored data and sets
-          the mission day.
+          A scenario replaces all stored data.
         </p>
         <div class="seg" role="group" aria-label="Scenario">
           {#each SCENARIO_IDS as id (id)}

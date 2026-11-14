@@ -234,13 +234,11 @@
         <span class="ic"><Icon name="bolt" /></span>
         <h2 id="p-t">Reaction test</h2>
       </div>
-      <span class="eyebrow">Optional, one each day</span>
+      <span class="eyebrow dur">
+        <Icon name="clock" size={13} />
+        {PVT_DURATION_MS / 60000} min
+      </span>
     </header>
-    <p>
-      The signal is a counter. It shows after a random wait of {PVT_INTERVAL_MIN_MS / 1000} to
-      {PVT_INTERVAL_MAX_MS / 1000} seconds. {touch ? 'Tap the box' : 'Click the box or press the Space key'} as soon as
-      you see it. The test runs for {PVT_DURATION_MS / 60000} minutes.
-    </p>
 
     {#if phase === 'running'}
       <button class="stage live" class:lit bind:this={target} onpointerdown={input}>
@@ -252,8 +250,8 @@
         <span class="small muted num">{secondsLeft} s left</span>
       </div>
       <div class="btns">
-        <button class="btn" onclick={() => cancel('You cancelled the test.')}>Cancel the test</button>
-        <span class="small muted">Escape also cancels.</span>
+        <button class="btn" onclick={() => cancel('You cancelled the test.')}>Cancel</button>
+        {#if !touch}<span class="small muted">Escape also cancels.</span>{/if}
       </div>
     {:else}
       <div class="stage">
@@ -266,7 +264,9 @@
             {app.loading ? 'Loading the data of today...' : 'The data of today is not available.'}
           </p>
         {:else}
-          <p class="muted">Start the test when you are ready.</p>
+          <p class="muted">
+            When the counter shows, {touch ? 'tap the box' : 'click the box or press the Space key'} at once.
+          </p>
         {/if}
       </div>
 
@@ -287,7 +287,7 @@
       {#if phase !== 'failed' && phase !== 'saving'}
         <div class="btns">
           <button class="btn primary" onclick={start} disabled={!app.day}>
-            {shown || phase === 'cancelled' ? 'Start the test again' : 'Start the test'}
+            {shown || phase === 'cancelled' ? 'Start again' : 'Start'}
           </button>
           {#if phase === 'done'}
             <button class="btn" onclick={() => navigate('home')}>Go to Today</button>
@@ -321,24 +321,19 @@
       </div>
     {/if}
 
-    <p class="small muted">
-      Lapse: a response of {PVT_LAPSE_MS} ms or more. False start: an input before the signal, or a
-      response under {PVT_FALSE_START_MS} ms. No input for {PVT_TIMEOUT_MS / 1000} seconds counts as
-      a lapse. If this window loses focus, the test stops and saves nothing.
-    </p>
+    <p class="small muted">If this window loses focus, the test stops and saves nothing.</p>
   </section>
 
   <div class="stack">
     <section class="card" aria-labelledby="p-h">
       <header>
-        <h2 id="p-h">Last {BAR_DAYS} days</h2>
+        <h2 id="p-h">Mean reaction time</h2>
         {#if rtState !== 'ok' && rtState !== 'not_enough_data'}
           <LevelBadge state={rtState} />
         {:else}
-          <span class="eyebrow">Dashed line: your baseline</span>
+          <span class="eyebrow">Last {BAR_DAYS} days</span>
         {/if}
       </header>
-      <span class="eyebrow">Mean reaction time</span>
       {#if lastDays.some((v) => v != null)}
         <MiniBars
           values={lastDays}
@@ -355,10 +350,6 @@
 
     <section class="card" aria-labelledby="p-w">
       <header><h2 id="p-w">How the test works</h2></header>
-      <p class="muted">
-        This test measures how fast you react. Slow reactions and missed signals are signs of
-        tiredness.
-      </p>
       <ol class="steps">
         <li>Look at the box and wait for the signal.</li>
         <li>When the counter shows, {touch ? 'tap the box' : 'press the Space key or click the box'} at once.</li>
