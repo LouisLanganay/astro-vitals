@@ -845,6 +845,12 @@
     .steps3 {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+    .steps3 .step {
+      flex: 1;
+    }
+    .steps3 .sv {
+      margin-top: auto;
+    }
   }
   .step {
     display: flex;

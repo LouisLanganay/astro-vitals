@@ -8,6 +8,7 @@ const DOC_KEY = 'astro-vitals.document';
 const CORRUPT_KEY = 'astro-vitals.document.corrupt';
 const CORRUPT_LABEL = `browser storage, key ${CORRUPT_KEY}`;
 const FIRST_SCENARIO = 'sleep_debt';
+const NOTE_MS = 7000;
 
 let memory: string | null = null;
 let corruptBackup: string | null = null;
@@ -98,12 +99,14 @@ mockIPC(async (cmd, payload) => {
   return result;
 });
 
-function banner() {
+export function showNote() {
   const note = document.createElement('p');
   note.className = 'web-demo-note';
   note.setAttribute('role', 'note');
   note.textContent = 'Web demo. Your data stays in this browser.';
   document.body.append(note);
+  setTimeout(() => note.classList.add('out'), NOTE_MS);
+  setTimeout(() => note.remove(), NOTE_MS + 600);
 }
 
 export async function startWeb() {
@@ -111,5 +114,4 @@ export async function startWeb() {
   if (memory === null && read(DOC_KEY) === null && read(CORRUPT_KEY) === null) {
     await run('load_scenario', { id: FIRST_SCENARIO });
   }
-  banner();
 }
