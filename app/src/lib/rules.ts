@@ -1,16 +1,30 @@
 import { INDICATOR_INFO, RED_FLAG_LABEL, SYMPTOM_LABEL } from './labels';
 import type { FiredRule, Indicator } from './types';
 
+const INDICATOR_TITLE: Record<Indicator, string> = {
+  sleep_hours: 'Short sleep',
+  sleep_quality: 'Poor sleep quality',
+  mood: 'Mood below your baseline',
+  stress: 'Stress above your baseline',
+  tiredness: 'Tiredness above your baseline',
+  workload: 'High workload',
+  fluid_l: 'Low fluid intake',
+  exercise_min: 'Exercise under the prescription',
+  pvt_mean_rt_ms: 'Slower reaction time',
+  pvt_lapses: 'More lapses on the reaction test',
+  pvt_false_starts: 'More false starts on the reaction test',
+  acuity_left: 'Near acuity is worse, left eye',
+  acuity_right: 'Near acuity is worse, right eye',
+  amsler_left: 'Distortion on the Amsler grid, left eye',
+  amsler_right: 'Distortion on the Amsler grid, right eye',
+};
+
 /** Short title of a fired rule. The rule file has no title, so it comes from the subject. */
 export function ruleTitle(rule: FiredRule): string {
   const s = rule.subject;
   switch (s.type) {
-    case 'indicator': {
-      const info = INDICATOR_INFO[s.value];
-      if (s.value.startsWith('amsler')) return `${info.label}`;
-      if (s.value.startsWith('acuity')) return `${info.label} is worse`;
-      return `${info.label} is ${info.bad === 'low' ? 'low' : 'high'}`;
-    }
+    case 'indicator':
+      return INDICATOR_TITLE[s.value];
     case 'symptom':
       return SYMPTOM_LABEL[s.value];
     case 'red_flag':

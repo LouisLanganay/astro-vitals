@@ -100,7 +100,7 @@
         </span>
         <div class="bt">
           <b>Astro Vitals</b>
-          <span>Crew health, Mars transit</span>
+          <span>Crew health</span>
         </div>
         <button
           class="btn ghost icon theme"
@@ -132,7 +132,7 @@
             <Icon name={s.icon} size={18} />
             <span>{s.label}</span>
             {#if s.id === 'daily_check' && checkDue}
-              <i class="due" aria-label="due"></i>
+              <i class="due" aria-hidden="true" title="Due today"></i>
             {/if}
           </button>
         {/each}
