@@ -1,4 +1,5 @@
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use astro_vitals_core::model::{
     AppError, DailyCheck, Document, Indicator, Notice, PacketExport, PvtInput, RulesError,
@@ -206,17 +207,35 @@ unsafe extern "C" fn dealloc(ptr: *mut u8, len: usize) {
     drop(unsafe { Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr, len)) });
 }
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn call(ptr: *const u8, len: usize) -> u64 {
+unsafe fn respond(ptr: *const u8, len: usize) -> (*mut u8, usize) {
     let bytes = unsafe { std::slice::from_raw_parts(ptr, len) };
     let output = match std::str::from_utf8(bytes) {
         Ok(input) => handle(input),
         Err(e) => json!({ "error": AppError::Internal { message: e.to_string() } }).to_string(),
     };
     let output = output.into_bytes().into_boxed_slice();
-    let out_len = output.len() as u64;
-    let out_ptr = Box::into_raw(output) as *mut u8 as usize as u64;
-    (out_ptr << 32) | out_len
+    let out_len = output.len();
+    (Box::into_raw(output) as *mut u8, out_len)
+}
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn call(ptr: *const u8, len: usize) -> u64 {
+    let (out_ptr, out_len) = unsafe { respond(ptr, len) };
+    ((out_ptr as usize as u64) << 32) | out_len as u64
+}
+
+static LAST_LEN: AtomicUsize = AtomicUsize::new(0);
+
+#[unsafe(no_mangle)]
+unsafe extern "C" fn call_ptr(ptr: *const u8, len: usize) -> *mut u8 {
+    let (out_ptr, out_len) = unsafe { respond(ptr, len) };
+    LAST_LEN.store(out_len, Ordering::SeqCst);
+    out_ptr
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn call_len() -> usize {
+    LAST_LEN.load(Ordering::SeqCst)
 }
 
 #[cfg(test)]
@@ -301,6 +320,21 @@ mod tests {
             dealloc(ptr, input.len());
             let len = (packed & 0xffff_ffff) as usize;
             assert!(len > 0);
+        }
+    }
+
+    #[test]
+    fn split_call_gives_the_same_answer() {
+        let input = json!({ "command": "get_settings", "today": "2026-11-14" }).to_string();
+        let ptr = alloc(input.len());
+        unsafe {
+            std::ptr::copy_nonoverlapping(input.as_ptr(), ptr, input.len());
+            let out = call_ptr(ptr, input.len());
+            let len = call_len();
+            dealloc(ptr, input.len());
+            let text = std::str::from_utf8(std::slice::from_raw_parts(out, len)).unwrap();
+            assert_eq!(text, handle(&input));
+            dealloc(out, len);
         }
     }
 }
