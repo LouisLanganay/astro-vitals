@@ -14,6 +14,8 @@
     type Settings,
   } from '../../lib/types';
 
+  import { minutesError } from './num';
+
   const REQUIRED = 'Enter a value.';
 
   let settings = $state.raw<Settings | null>(null);
@@ -55,8 +57,8 @@
     saved = false;
     const missing: FieldError[] = [];
     if (!launchDate) missing.push({ field: 'launch_date', message: REQUIRED });
-    if (prescription == null)
-      missing.push({ field: 'exercise_prescription_min', message: REQUIRED });
+    const message = minutesError(prescription);
+    if (message) missing.push({ field: 'exercise_prescription_min', message });
     if (missing.length > 0 || prescription == null) {
       error = { kind: 'validation', errors: missing };
       return;
@@ -129,6 +131,7 @@
         <span>Exercise prescription (minutes each day)</span>
         <input
           type="number"
+          min="0"
           step="1"
           inputmode="numeric"
           bind:value={prescription}

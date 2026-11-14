@@ -19,7 +19,7 @@
     type Symptom,
     type SymptomKind,
   } from '../../lib/types';
-  import { num } from './num';
+  import { minutesError, num } from './num';
 
   type ScaleKey = 'sleep_quality' | 'mood' | 'stress' | 'tiredness' | 'workload';
   type NumberKey = 'fluid_l' | 'exercise_resistive_min' | 'exercise_aerobic_min';
@@ -165,9 +165,10 @@
     if (!sleepStart) missing.push({ field: 'answers.sleep_start_min', message: REQUIRED });
     if (!sleepEnd) missing.push({ field: 'answers.sleep_end_min', message: REQUIRED });
     if (fluid == null) missing.push({ field: 'answers.fluid_l', message: REQUIRED });
-    if (resistive == null)
-      missing.push({ field: 'answers.exercise_resistive_min', message: REQUIRED });
-    if (aerobic == null) missing.push({ field: 'answers.exercise_aerobic_min', message: REQUIRED });
+    for (const key of ['exercise_resistive_min', 'exercise_aerobic_min'] as const) {
+      const message = minutesError(numbers[key]);
+      if (message) missing.push({ field: `answers.${key}`, message });
+    }
     if (missing.length > 0 || fluid == null || resistive == null || aerobic == null) {
       error = { kind: 'validation', errors: missing };
       return;
@@ -311,6 +312,7 @@
               <span>{def.label}</span>
               <input
                 type="number"
+                min="0"
                 step={def.step}
                 inputmode="decimal"
                 bind:value={numbers[def.key]}
