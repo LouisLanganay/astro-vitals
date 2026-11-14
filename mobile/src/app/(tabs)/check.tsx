@@ -5,23 +5,20 @@ import * as api from '../../lib/api';
 import { errorText, fieldMessage, toAppError } from '../../lib/errors';
 import { minToTime, missionDayLabel } from '../../lib/format';
 import type { IconName } from '../../lib/icons';
-import { RED_FLAG_LABEL, REGION_LABEL, SYMPTOM_LABEL } from '../../lib/labels';
+import { RED_FLAG_LABEL } from '../../lib/labels';
 import { fmt } from '../../lib/mission';
 import { refresh, useApp } from '../../lib/state';
 import {
-  BODY_REGIONS,
   RED_FLAG_KINDS,
-  SYMPTOM_KINDS,
   type AppError,
-  type BodyRegion,
   type DailyAnswers,
   type DailyCheck,
   type RedFlagKind,
   type Symptom,
-  type SymptomKind,
 } from '../../lib/types';
-import { Chips, Field, Scale, Stepper, Toggle } from '../../ui/form';
-import { Banner, Btn, Card, Disclaimer, Icon, Loading, Row, Screen, T, Well } from '../../ui/kit';
+import { Field, Scale, Stepper, Toggle } from '../../ui/form';
+import { SymptomEditor } from '../../ui/SymptomEditor';
+import { Banner, Btn, Card, Disclaimer, Icon, Loading, Row, Screen, T } from '../../ui/kit';
 import { C, F } from '../../ui/theme';
 
 type ScaleKey = 'sleep_quality' | 'mood' | 'stress' | 'tiredness' | 'workload';
@@ -48,72 +45,8 @@ const DEFAULT: DailyAnswers = {
   exercise_aerobic_min: 45,
 };
 
-const DEFAULT_REGION: Partial<Record<SymptomKind, BodyRegion>> = {
-  headache: 'head',
-  congestion: 'head',
-  back_pain: 'back',
-  nausea: 'abdomen',
-  dizziness: 'head',
-  vision_change: 'eyes',
-  skin_rash: 'arms',
-};
-
 const wrap = (min: number) => ((min % 1440) + 1440) % 1440;
 const sleepHours = (a: DailyAnswers) => wrap(a.sleep_end_min - a.sleep_start_min) / 60;
-
-export function SymptomEditor({ symptom, onChange, onRemove, prefix, error }: { symptom: Symptom; onChange: (s: Symptom) => void; onRemove?: () => void; prefix: string; error: AppError | null }) {
-  const msg = (f: string) => fieldMessage(error, `${prefix}.${f}`);
-  return (
-    <Well>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <T v="h3">{SYMPTOM_LABEL[symptom.kind]}</T>
-        {onRemove ? <Btn small kind="ghost" icon="trash" label="Remove" onPress={onRemove} /> : null}
-      </Row>
-      <Field label="Kind" error={msg('kind')}>
-        <Chips
-          items={SYMPTOM_KINDS.map((k) => ({ key: k, label: SYMPTOM_LABEL[k] }))}
-          value={symptom.kind}
-          onChange={(kind) => onChange({ ...symptom, kind, region: DEFAULT_REGION[kind] ?? symptom.region })}
-        />
-      </Field>
-      <Field label="Severity" error={msg('severity')}>
-        <Chips
-          items={[
-            { key: 1, label: '1 = mild' },
-            { key: 2, label: '2 = moderate' },
-            { key: 3, label: '3 = severe' },
-          ]}
-          value={symptom.severity}
-          onChange={(severity) => onChange({ ...symptom, severity })}
-        />
-      </Field>
-      <Field label="Body region" error={msg('region')}>
-        <Chips items={BODY_REGIONS.map((r) => ({ key: r, label: REGION_LABEL[r] }))} value={symptom.region} onChange={(region) => onChange({ ...symptom, region })} />
-      </Field>
-      <Field
-        label="Treated"
-        help="You took a medicine or did a treatment."
-        error={msg('treated')}
-        right={<Toggle label="Treated" value={symptom.treated} onChange={(treated) => onChange({ ...symptom, treated, improved: treated ? symptom.improved : null })} />}
-      >
-        {null}
-      </Field>
-      {symptom.treated ? (
-        <Field label="Improved after the treatment" error={msg('improved')}>
-          <Chips
-            items={[
-              { key: 'unknown', label: 'Not known' },
-              { key: 'yes', label: 'Yes' },
-              { key: 'no', label: 'No' },
-            ]}
-            value={symptom.improved == null ? 'unknown' : symptom.improved ? 'yes' : 'no'}
-            onChange={(k) => onChange({ ...symptom, improved: k === 'unknown' ? null : k === 'yes' })}
-          />
-        </Field>
-      ) : null}
-    </Well>
-  );
-}
 
 export default function Check() {
   const app = useApp();
