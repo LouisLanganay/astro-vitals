@@ -64,7 +64,7 @@ Example: a mean fluid intake below 2.5 L for 3 days fires a self-care rule. The 
 1. Today: mission day 120, level "Tell the CMO". Show one fired rule with its source.
 2. Trends, Sleep duration: the sleep decreases from day 40. Show the 7-day mean and the baseline.
 3. Say: first self-care on day 50, first "tell the CMO" on day 57.
-4. Body figure: select the head.
+4. Body figure: select the head. Show the "Male / Female" choice.
 5. Export: show the size before the export.
 The web demo runs the same Rust engine as the desktop app, compiled to WebAssembly. The data stays in the browser.
 
