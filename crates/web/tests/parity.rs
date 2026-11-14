@@ -361,14 +361,22 @@ fn get_day_gives_the_corrupt_notice_from_the_request() {
 }
 
 #[test]
-#[ignore = "parity gap: a corrupt document gives no data_file_corrupt notice in the same get_day response"]
 fn get_day_gives_the_corrupt_notice_for_a_corrupt_document() {
     let response = send("get_day", json!({}), &json!({ "version": "x" }));
     assert_eq!(response["corrupt"], true);
-    assert_eq!(
-        ok(&response)["mission"]["notices"][0]["kind"],
-        "data_file_corrupt"
-    );
+    let notice = &ok(&response)["mission"]["notices"][0];
+    assert_eq!(notice["kind"], "data_file_corrupt");
+    assert_eq!(notice["backup_path"], astro_vitals_web::CORRUPT_LABEL);
+}
+
+#[test]
+fn web_start_uses_the_same_corrupt_label() {
+    let start = read("app/src/web/start.ts");
+    let key = astro_vitals_web::CORRUPT_LABEL
+        .strip_prefix("browser storage, key ")
+        .unwrap();
+    assert!(start.contains(&format!("const CORRUPT_KEY = '{key}';")));
+    assert!(start.contains("const CORRUPT_LABEL = `browser storage, key ${CORRUPT_KEY}`;"));
 }
 
 #[test]
