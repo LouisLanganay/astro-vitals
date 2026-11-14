@@ -14,7 +14,7 @@ On the way to Mars, a crew is alone for months and a message to Earth can take m
 
 The live demo runs the real rule engine in the browser (Rust compiled to WebAssembly). Your data stays in your browser.
 
-1. Open the live demo. The `sleep_debt` scenario loads on the first visit.
+1. Open the live demo and select **Enter the ship**. The `sleep_debt` scenario loads on the first visit. To skip the intro, open https://louislanganay.github.io/astro-vitals/#app.
 2. Open **Today**. Each fired rule shows its action, its explanation and its source.
 3. Open **Trends** and select **Sleep duration** to see the values, the 7-day mean and the pre-flight median.
 4. To change the scenario, open **Settings**, select a scenario in **Load a scenario**, then **Replace the data**.

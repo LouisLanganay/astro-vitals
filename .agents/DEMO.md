@@ -40,9 +40,9 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 
 ## PVT-B
 
-1. Open "PVT-B". Start the test. Press Space at each stimulus for 3 minutes.
+1. Open "PVT-B" (in "More" on a phone). Select "Start". Press Space (or tap the box) at each signal for 3 minutes.
 2. Expected: mean reaction time, lapses and false starts.
-3. Start again and click a different window. Expected: the test stops and saves nothing.
+3. Select "Start again" and click a different window. Expected: the test stops and saves nothing.
 
 ## Export
 
@@ -63,6 +63,6 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 
 ## Web demo
 
-1. Open https://louislanganay.github.io/astro-vitals/. The `sleep_debt` scenario loads on the first visit.
+1. Open https://louislanganay.github.io/astro-vitals/. Select "Enter the ship". The `sleep_debt` scenario loads on the first visit. Add `#app` to the URL to skip the intro.
 2. Do the steps above from "Today screen". The data stays in the browser storage.
 3. In "Export", the export button downloads the JSON file. There is no path dialog.
