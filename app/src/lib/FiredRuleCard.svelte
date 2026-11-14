@@ -14,8 +14,6 @@
   }: { rule: FiredRule; index?: number; children?: Snippet } = $props();
 
   const fact = $derived(ruleFact(rule));
-  const uid = $props.id();
-  let open = $state(false);
 </script>
 
 <article class="ins rise" data-lv={rule.level} style:--i={index}>
@@ -28,7 +26,7 @@
   {#if fact}
     <p class="fact">{fact}</p>
   {/if}
-  <p class="why rise" id="{uid}-why" hidden={!open}>{rule.explanation}</p>
+  <p class="why">{rule.explanation}</p>
   <div class="foot">
     <p class="src">
       <Icon name="link" size={13} />
@@ -40,20 +38,9 @@
         {rule.source}
       {/if}
     </p>
-    <div class="btns">
-      {#if children}{@render children()}{/if}
-      <button
-        type="button"
-        class="btn ghost sm icon"
-        aria-expanded={open}
-        aria-controls="{uid}-why"
-        aria-label="Explanation"
-        title="Explanation"
-        onclick={() => (open = !open)}
-      >
-        <Icon name="info" size={15} active={open} />
-      </button>
-    </div>
+    {#if children}
+      <div class="btns">{@render children()}</div>
+    {/if}
   </div>
 </article>
 
