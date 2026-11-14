@@ -4,8 +4,7 @@ pub type MissionDay = i32;
 
 pub const MINUTES_PER_DAY: u16 = 1440;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Level {
     Ok,
@@ -310,11 +309,9 @@ impl Indicator {
     pub fn min_scale(self) -> f64 {
         match self {
             Self::SleepHours => 0.25,
-            Self::SleepQuality
-            | Self::Mood
-            | Self::Stress
-            | Self::Tiredness
-            | Self::Workload => 0.5,
+            Self::SleepQuality | Self::Mood | Self::Stress | Self::Tiredness | Self::Workload => {
+                0.5
+            }
             Self::FluidL => 0.1,
             Self::ExerciseMin => 5.0,
             Self::PvtMeanRt => 10.0,

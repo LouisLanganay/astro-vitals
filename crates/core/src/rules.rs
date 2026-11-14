@@ -85,8 +85,8 @@ impl fmt::Display for RuleError {
 impl std::error::Error for RuleError {}
 
 pub fn parse_rules(src: &str) -> Result<RuleSet, RuleError> {
-    let table: toml::Table = toml::from_str(src)
-        .map_err(|e| RuleError::new(None, e.to_string()))?;
+    let table: toml::Table =
+        toml::from_str(src).map_err(|e| RuleError::new(None, e.to_string()))?;
     let items = match table.get("rules").and_then(toml::Value::as_array) {
         Some(items) => items,
         None => return Err(RuleError::new(None, "the file has no [[rules]] array")),
@@ -102,8 +102,7 @@ pub fn parse_rules(src: &str) -> Result<RuleSet, RuleError> {
             .clone()
             .try_into::<Rule>()
             .map_err(|e| RuleError::new(id, format!("entry {}: {e}", index + 1)))?;
-        check_rule(&rule)
-            .map_err(|message| RuleError::new(Some(rule.id.clone()), message))?;
+        check_rule(&rule).map_err(|message| RuleError::new(Some(rule.id.clone()), message))?;
         if !ids.insert(rule.id.clone()) {
             return Err(RuleError::new(Some(rule.id), "the id is not unique"));
         }
@@ -793,8 +792,12 @@ level = "flight_surgeon"
 "#;
         let set = rules(&rule_toml("red", fields));
         let mut today = check(3);
-        today.symptoms.push(symptom(SymptomKind::ChestPain, BodyRegion::Chest));
-        today.symptoms.push(symptom(SymptomKind::Headache, BodyRegion::Head));
+        today
+            .symptoms
+            .push(symptom(SymptomKind::ChestPain, BodyRegion::Chest));
+        today
+            .symptoms
+            .push(symptom(SymptomKind::Headache, BodyRegion::Head));
         let data = data_of([today]);
         let result = evaluate(3, &data, &set, &Settings::default());
         assert_eq!(result.level, Level::FlightSurgeon);

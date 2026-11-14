@@ -98,10 +98,9 @@ pub fn civil_from_days(days: i64) -> (i64, u32, u32) {
 pub fn mission_day(date: &str, launch: &str) -> Result<MissionDay, ClockError> {
     let (year, month, day) = parse_date(date)?;
     let (launch_year, launch_month, launch_day) = parse_date(launch)?;
-    let diff = days_from_civil(year, month, day)
-        - days_from_civil(launch_year, launch_month, launch_day);
-    MissionDay::try_from(diff)
-        .map_err(|_| clock_error(date, "the date is too far from launch"))
+    let diff =
+        days_from_civil(year, month, day) - days_from_civil(launch_year, launch_month, launch_day);
+    MissionDay::try_from(diff).map_err(|_| clock_error(date, "the date is too far from launch"))
 }
 
 pub fn date_for_day(launch: &str, day: MissionDay) -> Result<String, ClockError> {
