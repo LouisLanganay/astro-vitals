@@ -166,10 +166,10 @@
 {#snippet stepList()}
   <ol class="vsteps">
     {#each steps as s, k (k)}
-      <li class="vstep" class:now={s.now}>
+      <li class="vstep" class:now={s.now} aria-current={s.now ? 'step' : undefined}>
         <span class="n" class:ok={s.done}>
           {#if s.done}
-            <span class="tick pop"><Icon name="check" size={15} /></span>
+            <span class="tick pop" role="img" aria-label="Done" title="Done"><Icon name="check" size={15} /></span>
           {:else}
             {k + 1}
           {/if}
@@ -178,13 +178,6 @@
           <b>{s.title}</b>
           <span class="s">{s.sub}</span>
         </span>
-        {#if s.done}
-          <span class="okd pop">Done</span>
-        {:else if s.now}
-          <span class="nowd">Now</span>
-        {:else}
-          <span></span>
-        {/if}
       </li>
     {/each}
   </ol>
@@ -235,13 +228,20 @@
     <section class="card" aria-labelledby="v-s">
       <header>
         <h2 id="v-s">Eye {eyeIndex + 1} of {EYES.length}</h2>
-        <button class="btn ghost sm" onclick={() => (step = 'intro')}>Stop</button>
+        <button
+          class="btn ghost sm icon"
+          onclick={() => (step = 'intro')}
+          aria-label="Stop the test"
+          title="Stop the test"
+        >
+          <Icon name="close" size={16} />
+        </button>
       </header>
       {@render stepList()}
     </section>
   </div>
 {:else if step === 'saving'}
-  <p class="muted" role="status">The test is complete. Saving the result...</p>
+  <p class="muted" role="status">Saving the result...</p>
 {:else if step === 'failed' && error}
   <div class="banner error" role="alert">
     <span>The result was not saved. {errorText(error)}</span>
@@ -258,9 +258,8 @@
           <span class="ic"><Icon name="eye" /></span>
           <h2 id="v-t">Weekly vision test</h2>
         </div>
-        <span class="eyebrow">{due ? 'Due now' : 'Not due today'}</span>
+        <span class="eyebrow">{due ? 'Due' : 'Not due'}</span>
       </header>
-      <p>One eye at a time. Hold the screen at {VIEWING_DISTANCE_CM} cm.</p>
       {@render stepList()}
       <div class="btns">
         <button class="btn primary" onclick={start}>
@@ -281,10 +280,7 @@
           </header>
           {@render eyeResult('right', shown.right, 0)}
           {@render eyeResult('left', shown.left, 1)}
-          <p class="small muted">
-            Near acuity: logMAR 0.0 is normal vision. A lower value is better. Amsler grid: a
-            distortion can be a sign of a change in the retina.
-          </p>
+          <p class="small muted">logMAR 0.0 is normal vision. A lower value is better.</p>
           {#if step === 'done'}
             <div class="btns">
               <button class="btn primary" onclick={() => navigate('home')}>
@@ -318,7 +314,7 @@
   }
   .vstep {
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr) auto;
+    grid-template-columns: 30px minmax(0, 1fr);
     align-items: center;
     gap: 12px;
     padding: 12px 14px;
@@ -356,14 +352,6 @@
     display: block;
     font-size: 12.5px;
     color: var(--muted);
-  }
-  .okd {
-    font-size: 12.5px;
-    color: var(--green);
-  }
-  .nowd {
-    font-size: 12.5px;
-    color: var(--ui);
   }
   .eye {
     display: flex;

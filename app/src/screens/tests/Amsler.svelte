@@ -58,8 +58,9 @@
   </p>
   {#if distortion}
     <p class="muted">
-      Select each cell where the lines are wavy, broken or absent.
-      {touch ? 'Tap each cell with your finger.' : 'Use the mouse, or use the arrow keys and the Space key.'} Then continue.
+      Select each cell where the lines are wavy, broken or absent.{touch
+        ? ''
+        : ' You can also use the arrow keys and the Space key.'}
     </p>
   {:else}
     <p class="muted">Are lines of the grid wavy, broken or absent in an area?</p>

@@ -35,13 +35,11 @@
   </header>
   <p>
     {#if upright}
-      The test must know the size of your display. Hold a bank card upright against the screen,
-      on the rectangle. Move the slider until the rectangle has the same width as the short side
-      of the card ({CARD_HEIGHT_MM} mm).
+      Hold a bank card upright against the screen, on the rectangle. Move the slider until the
+      rectangle has the same width as the short side of the card.
     {:else}
-      The test must know the size of your display. Hold a bank card against the screen, on the
-      rectangle. Move the slider until the rectangle has the same width as the card
-      ({CARD_WIDTH_MM} mm).
+      Hold a bank card against the screen, on the rectangle. Move the slider until the rectangle
+      has the same width as the card.
     {/if}
   </p>
   <div class="area" class:upright>
@@ -65,7 +63,6 @@
       oninput={(e) => (scale = Number(e.currentTarget.value) / edgeMm)}
       style:--p="{((width - minPx) / (maxPx - minPx)) * 100}%"
     />
-    <span class="help">The arrow keys change the width in steps of 1 px.</span>
   </label>
   <p class="small muted">
     Do the calibration again when you use a different display or a different zoom level.

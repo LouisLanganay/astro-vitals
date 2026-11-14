@@ -4,7 +4,6 @@
   import { savePvt, series } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
   import Icon from '../../lib/Icon.svelte';
-  import { INDICATOR_INFO } from '../../lib/labels';
   import LevelBadge from '../../lib/LevelBadge.svelte';
   import MiniBars from '../../lib/MiniBars.svelte';
   import { addDays } from '../../lib/mission';
@@ -45,21 +44,24 @@
 
   const shown = $derived(phase === 'done' ? result : (app.day?.pvt ?? null));
 
-  const rows = (r: PvtResult): { indicator: Indicator; value: string; help: string }[] => [
+  const rows = (r: PvtResult): { indicator: Indicator; label: string; value: string; help: string }[] => [
     {
       indicator: 'pvt_mean_rt_ms',
+      label: 'Mean reaction time',
       value: r.mean_rt_ms === null ? 'No valid response' : `${Math.round(r.mean_rt_ms)} ms`,
-      help: 'The mean time of your valid responses. A lower value is better.',
+      help: 'A lower value is better.',
     },
     {
       indicator: 'pvt_lapses',
+      label: 'Lapses',
       value: String(r.lapses),
-      help: `Responses at or above ${PVT_LAPSE_MS} ms. No response for ${PVT_TIMEOUT_MS / 1000} seconds is also a lapse.`,
+      help: `${PVT_LAPSE_MS} ms or more, or no response in ${PVT_TIMEOUT_MS / 1000} s.`,
     },
     {
       indicator: 'pvt_false_starts',
+      label: 'False starts',
       value: String(r.false_starts),
-      help: `Inputs before the signal, and responses below ${PVT_FALSE_START_MS} ms.`,
+      help: `Input before the signal, or below ${PVT_FALSE_START_MS} ms.`,
     },
   ];
 
@@ -247,16 +249,24 @@
       </button>
       <div class="run">
         <progress max={PVT_DURATION_MS} value={elapsedMs} aria-label="Test progress"></progress>
-        <span class="small muted num">{secondsLeft} s left</span>
+        <span class="small muted num left">
+          <Icon name="clock" size={13} />{secondsLeft} s
+        </span>
       </div>
       <div class="btns">
-        <button class="btn" onclick={() => cancel('You cancelled the test.')}>Cancel</button>
-        {#if !touch}<span class="small muted">Escape also cancels.</span>{/if}
+        <button
+          class="btn"
+          onclick={() => cancel('You cancelled the test.')}
+          aria-keyshortcuts={touch ? undefined : 'Escape'}
+          title={touch ? undefined : 'Cancel (Escape)'}
+        >
+          Cancel
+        </button>
       </div>
     {:else}
       <div class="stage">
         {#if phase === 'saving'}
-          <p class="muted" role="status">The test is complete. Saving the result...</p>
+          <p class="muted" role="status">Saving the result...</p>
         {:else if phase === 'done'}
           <p class="pop">Test complete.</p>
         {:else if !app.day}
@@ -302,14 +312,13 @@
     {#if shown && phase !== 'running'}
       <div aria-live="polite">
         <span class="lbl">
-          {phase === 'done' ? 'Your result, saved for today' : 'Result of today'} ·
-          {shown.stimuli} signals
+          Result of today · {shown.stimuli} signals
         </span>
         <dl class="res">
           {#each rows(shown) as row, i (row.indicator)}
             {@const state = stateOf(row.indicator)}
             <div class="tile rise" style:--i={i}>
-              <dt>{INDICATOR_INFO[row.indicator].label}</dt>
+              <dt>{row.label}</dt>
               <dd class="v num">{row.value}</dd>
               {#if state}
                 <dd class="st"><LevelBadge {state} /></dd>
@@ -320,8 +329,6 @@
         </dl>
       </div>
     {/if}
-
-    <p class="small muted">If this window loses focus, the test stops and saves nothing.</p>
   </section>
 
   <div class="stack">
@@ -352,9 +359,11 @@
       <header><h2 id="p-w">How the test works</h2></header>
       <ol class="steps">
         <li>Look at the box and wait for the signal.</li>
-        <li>When the counter shows, {touch ? 'tap the box' : 'press the Space key or click the box'} at once.</li>
         <li>Do not press before the signal. An early input is a false start.</li>
-        <li>Keep this window in front for the {PVT_DURATION_MS / 60000} minutes.</li>
+        <li>
+          Keep this window in front for the {PVT_DURATION_MS / 60000} minutes. If it loses focus, the
+          test stops and saves nothing.
+        </li>
       </ol>
     </section>
   </div>
@@ -424,6 +433,11 @@
     display: flex;
     align-items: center;
     gap: 12px;
+  }
+  .left {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
   }
   progress {
     flex: 1;

@@ -94,10 +94,9 @@
     <span class="eyebrow">Cover your {eye === 'left' ? 'right' : 'left'} eye</span>
   </header>
   <p>
-    Keep your {eye} eye {VIEWING_DISTANCE_CM} cm from the screen. The open side of the E points up,
-    down, left or right.
-    {touch ? 'Tap the button for that direction.' : 'Press the arrow key for that direction, or use the buttons.'}
-    If you cannot see the direction, select one direction.
+    Keep your {eye} eye {VIEWING_DISTANCE_CM} cm from the screen. Select the direction of the open
+    side of the E{touch ? '' : ' with an arrow key or a button'}. If you cannot see it, select one
+    direction.
   </p>
   {#if started}
     <div class="stage">
@@ -121,7 +120,7 @@
       </div>
     </div>
     <p class="small muted num" role="status">
-      Size logMAR {logmarAt(index).toFixed(1)} · trial {trial + 1} of {ACUITY_TRIALS_PER_SIZE}
+      logMAR {logmarAt(index).toFixed(1)} · trial {trial + 1}/{ACUITY_TRIALS_PER_SIZE}
     </p>
     <div class="pad">
       {#each PAD as d (d)}
@@ -132,9 +131,7 @@
     </div>
   {:else}
     <div class="btns">
-      <button class="btn primary" onclick={() => (started = true)}>
-        Start with the {eye} eye
-      </button>
+      <button class="btn primary" onclick={() => (started = true)}>Start</button>
     </div>
   {/if}
 </section>
