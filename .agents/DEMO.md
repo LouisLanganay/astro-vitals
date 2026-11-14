@@ -34,9 +34,9 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 
 ## Daily check
 
-1. Open "Daily check". Fill each field. Select "Save".
+1. Open "Daily check". Move each slider. Enter fluid and exercise. Select "Save".
 2. Expected: the Today screen shows the daily check as done in "Due today". The streak increases by 1.
-3. Enter a fluid value of -1. Expected: the error shows at the fluid field.
+3. Enter a fluid value of 16 (the limit is 15 L). Expected: the error shows at the fluid field.
 
 ## PVT-B
 
