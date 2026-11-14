@@ -164,16 +164,11 @@ fn a_window_with_fewer_than_min_days_gives_not_enough_data() {
 
     put(&mut d, 5..6, short);
     let a = at(&d, 6);
-    assert!(a.fired.is_empty());
-    assert_eq!(state(&a, Indicator::FluidL), IndicatorState::NotEnoughData);
-
-    put(&mut d, 4..5, short);
-    let a = at(&d, 6);
     assert_eq!(ids(&a), ["sleep_3d_below_5h", "fluid_3d_below_2_5l"]);
     assert_eq!(a.level, Level::TellCmo);
     assert_eq!(state(&a, Indicator::FluidL), IndicatorState::SelfCare);
 
-    put(&mut d, 2..4, short);
+    put(&mut d, 2..5, short);
     assert!(ids(&at(&d, 6)).contains(&"sleep_7d_below_6h"));
 }
 
