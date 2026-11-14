@@ -38,7 +38,7 @@
     { id: 'pvt', label: 'PVT-B', title: 'PVT-B reaction test', icon: 'bolt', component: Pvt },
     { id: 'vision', label: 'Vision test', title: 'Vision test', icon: 'eye', component: VisionTest },
     { id: 'export', label: 'Export', title: 'Packet for the flight surgeon', icon: 'export', component: PacketExport },
-    { id: 'settings', label: 'Settings', title: 'Settings', icon: 'settings', component: Settings },
+    { id: 'settings', label: 'Settings', title: 'Rules and settings', icon: 'settings', component: Settings },
   ];
 
   let dismissed = $state(false);
