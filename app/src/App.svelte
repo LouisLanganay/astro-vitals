@@ -163,7 +163,6 @@
         <div class="bt">
           <div class="bn" class:out={scrolled}>
             <b>Astro Vitals</b>
-            <span>Crew health</span>
           </div>
           <span class="ctitle" class:in={scrolled} aria-hidden="true">{current.title}</span>
         </div>
@@ -241,7 +240,7 @@
         {#if day == null}
           <p class="eyebrow">Mission day unknown</p>
         {:else if day < 0}
-          <p class="eyebrow">Pre-flight day {day}, launch in {-day} days</p>
+          <p class="eyebrow">Launch in {-day} {day === -1 ? 'day' : 'days'}</p>
         {/if}
         {#key current.id}
           <h1 in:fly={{ y: prefersReducedMotion.current ? 0 : 6, duration: prefersReducedMotion.current ? 0 : 220 }}>
@@ -249,7 +248,7 @@
           </h1>
         {/key}
       </div>
-      {#if app.assessment}
+      {#if app.assessment && current.id !== 'home'}
         <LevelBadge state={app.assessment.level} size="lg" />
       {/if}
     </header>
@@ -264,7 +263,9 @@
             The data file was corrupt. The application started with empty data. The old file is
             <code>{notice.backup_path}</code>.
           </span>
-          <button class="btn sm" onclick={() => (dismissed = true)}>Dismiss</button>
+          <button class="btn sm icon" onclick={() => (dismissed = true)} aria-label="Dismiss" title="Dismiss">
+            <Icon name="close" size={15} />
+          </button>
         </p>
       {/each}
       {#if app.assessment && !app.assessment.drift_enabled}
@@ -452,11 +453,6 @@
     font-size: 15.5px;
     letter-spacing: -0.02em;
     line-height: 1.2;
-  }
-  .brand .bn span {
-    display: block;
-    font-size: 12px;
-    color: var(--muted);
   }
   .theme .pop {
     display: grid;

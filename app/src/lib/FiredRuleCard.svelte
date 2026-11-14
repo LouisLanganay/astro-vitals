@@ -14,6 +14,8 @@
   }: { rule: FiredRule; index?: number; children?: Snippet } = $props();
 
   const fact = $derived(ruleFact(rule));
+  const uid = $props.id();
+  let open = $state(false);
 </script>
 
 <article class="ins rise" data-lv={rule.level} style:--i={index}>
@@ -26,20 +28,33 @@
   {#if fact}
     <p class="fact">{fact}</p>
   {/if}
-  <p class="why">{rule.explanation}</p>
-  <p class="src">
-    <Icon name="link" size={13} />
-    {#if isUrl(rule.source)}
-      <a href={rule.source} target="_blank" rel="noopener noreferrer" aria-label="Source: {sourceLabel(rule.source)}">
-        {sourceLabel(rule.source)}
-      </a>
-    {:else}
-      {rule.source}
-    {/if}
-  </p>
-  {#if children}
-    <div class="btns">{@render children()}</div>
-  {/if}
+  <p class="why rise" id="{uid}-why" hidden={!open}>{rule.explanation}</p>
+  <div class="foot">
+    <p class="src">
+      <Icon name="link" size={13} />
+      {#if isUrl(rule.source)}
+        <a href={rule.source} target="_blank" rel="noopener noreferrer" aria-label="Source: {sourceLabel(rule.source)}">
+          {sourceLabel(rule.source)}
+        </a>
+      {:else}
+        {rule.source}
+      {/if}
+    </p>
+    <div class="btns">
+      {#if children}{@render children()}{/if}
+      <button
+        type="button"
+        class="btn ghost sm icon"
+        aria-expanded={open}
+        aria-controls="{uid}-why"
+        aria-label="Explanation"
+        title="Explanation"
+        onclick={() => (open = !open)}
+      >
+        <Icon name="info" size={15} active={open} />
+      </button>
+    </div>
+  </div>
 </article>
 
 <style>
@@ -82,6 +97,16 @@
   .src {
     font-size: 13px;
     color: var(--muted);
+  }
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+  }
+  .foot .btns {
+    margin-left: auto;
   }
   .src {
     display: flex;
