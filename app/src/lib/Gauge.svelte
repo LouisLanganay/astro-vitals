@@ -44,13 +44,10 @@
       />
     {/each}
     {#key level}
-      <text class="g1" x="70" y="70" text-anchor="middle">
+      <text class="g1" x="70" y="75" text-anchor="middle">
         {index >= 0 ? STATE_LABEL[level] : 'No data'}
       </text>
     {/key}
-    <text class="g2" x="70" y="88" text-anchor="middle">
-      {index >= 0 ? `level ${index + 1} of 4` : 'no level yet'}
-    </text>
   </svg>
 </div>
 
@@ -93,10 +90,5 @@
     fill: var(--lc);
     letter-spacing: -0.01em;
     animation: fade-in 300ms var(--ease-out) both;
-  }
-  .g2 {
-    font-family: var(--font-body);
-    font-size: 11px;
-    fill: var(--muted);
   }
 </style>
