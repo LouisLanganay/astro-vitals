@@ -10,6 +10,7 @@
     thresholds = [],
     minSpan = 1,
     until = null,
+    format = (v: number) => String(v),
   }: {
     points: SeriesPoint[];
     baseline: number | null;
@@ -19,10 +20,14 @@
     thresholds?: { value: number; level: Level }[];
     minSpan?: number;
     until?: number | null;
+    format?: (v: number) => string;
   } = $props();
 
   let width = $state(520);
-  const H = 184;
+  const H = $derived(width < 420 ? 150 : 184);
+  let pick = $state<number | null>(null);
+  let svgEl = $state<SVGSVGElement>();
+  let clearTimer: ReturnType<typeof setTimeout> | undefined;
   const L = 36;
   const R = 10;
   const T = 12;
@@ -120,16 +125,94 @@
       baselineY: baseline === null ? null : Y(baseline),
       thr: thresholds.map((t) => ({ y: Y(t.value), level: t.level })),
       n: bars.length,
+      first,
+      last,
+      sw,
+      X,
+      Y,
     };
   });
+
+  const byDay = $derived(new Map(points.map((p) => [p.mission_day, p])));
+
+  const cursor = $derived.by(() => {
+    if (!chart || pick === null) return null;
+    const p = byDay.get(pick);
+    const v = p ? (weekly ? p.value : (p.mean_7d ?? p.value)) : null;
+    const x = chart.X(pick);
+    const lines = p?.value != null ? [format(p.value)] : ['No data'];
+    if (!weekly && p?.mean_7d != null) lines.push(`${MEAN} ${format(p.mean_7d)}`);
+    return {
+      x,
+      y: v === null ? null : chart.Y(v),
+      day: pick,
+      lines,
+      flip: x > chart.W * 0.62,
+    };
+  });
+
+  const MEAN = '7-day mean';
+
+  function dayAt(e: PointerEvent) {
+    if (!chart || !svgEl) return null;
+    const r = svgEl.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * chart.W;
+    const d = chart.first + Math.floor((x - L) / chart.sw);
+    return Math.max(chart.first, Math.min(chart.last, d));
+  }
+
+  let viaPointer = $state(false);
+
+  function move(e: PointerEvent) {
+    if (e.type === 'pointerdown') viaPointer = true;
+    const d = dayAt(e);
+    if (d === null) return;
+    clearTimeout(clearTimer);
+    pick = d;
+  }
+
+  function leave(e: PointerEvent) {
+    if (e.pointerType === 'mouse') pick = null;
+    else {
+      clearTimeout(clearTimer);
+      clearTimer = setTimeout(() => (pick = null), 2600);
+    }
+  }
+
+  function key(e: KeyboardEvent) {
+    viaPointer = false;
+    if (!chart) return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Escape') return;
+    e.preventDefault();
+    if (e.key === 'Escape') {
+      pick = null;
+      return;
+    }
+    const step = e.key === 'ArrowLeft' ? -1 : 1;
+    const start = pick ?? chart.last;
+    pick = Math.max(chart.first, Math.min(chart.last, start + (pick === null ? 0 : step)));
+  }
 </script>
 
 <div class="plot" bind:clientWidth={width}>
   {#if chart}
     <svg
+      bind:this={svgEl}
+      class:ptr={viaPointer}
       viewBox="0 0 {chart.W} {H}"
-      role="img"
+      role="slider"
+      tabindex="0"
       aria-label="{label}: {weekly ? 'weekly values' : 'daily values, 7-day mean'} and baseline median"
+      aria-valuemin={chart.first}
+      aria-valuemax={chart.last}
+      aria-valuenow={pick ?? chart.last}
+      aria-valuetext={cursor ? `Day ${cursor.day}: ${cursor.lines.join(', ')}` : 'Use the arrow keys to read the value of each day.'}
+      onpointerdown={move}
+      onpointermove={move}
+      onpointerleave={leave}
+      onpointercancel={leave}
+      onkeydown={key}
+      onblur={() => (pick = null)}
     >
       {#if chart.pre}
         <rect class="pre" x={L} y={T} width={chart.pre.w} height={chart.y0 - T} rx="4" />
@@ -170,12 +253,32 @@
         <circle class="dot" cx={d.x} cy={d.y} r="3" style:--k={i} />
       {/each}
       {#if chart.end}
-        <g class="end" data-lv={level}>
+        <g class="end" class:dim={cursor !== null} data-lv={level}>
           <circle class="halo" cx={chart.end.x} cy={chart.end.y} r="10" />
           <circle class="core" cx={chart.end.x} cy={chart.end.y} r="4.6" />
         </g>
       {/if}
+      {#if cursor}
+        <g class="cur" style:transform="translateX({cursor.x}px)">
+          <line x1="0" x2="0" y1={T} y2={chart.y0} />
+          {#if cursor.y !== null}
+            <circle class="cdot" cx="0" cy={cursor.y} r="4.2" />
+          {/if}
+        </g>
+      {/if}
     </svg>
+    {#if cursor}
+      <div
+        class="tip"
+        class:flip={cursor.flip}
+        style:left="{(cursor.x / chart.W) * 100}%"
+        aria-hidden="true"
+      >
+        <b>Day {cursor.day}</b>
+        {#each cursor.lines as l, i (i)}<span>{l}</span>{/each}
+      </div>
+    {/if}
+
   {:else}
     <p class="muted small nodata">No data in this range.</p>
   {/if}
@@ -183,6 +286,7 @@
 
 <style>
   .plot {
+    position: relative;
     min-width: 0;
   }
   svg {
@@ -190,7 +294,76 @@
     width: 100%;
     height: auto;
     overflow: visible;
+    touch-action: pan-y;
+    cursor: crosshair;
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 8px;
   }
+  svg:focus {
+    outline: none;
+  }
+  svg:focus-visible:not(.ptr) {
+    outline: 2px solid var(--ui);
+    outline-offset: 4px;
+  }
+  .cur {
+    transition: transform 90ms var(--ease-out);
+    pointer-events: none;
+  }
+  .cur line {
+    stroke: var(--fg);
+    stroke-opacity: 0.35;
+    stroke-width: 1;
+  }
+  .cdot {
+    fill: var(--fg);
+    stroke: var(--card-b);
+    stroke-width: 2;
+    transition: cy 90ms var(--ease-out);
+    animation: pop-in 200ms var(--ease-spring) backwards;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .end {
+    transition: opacity var(--t-fast);
+  }
+  .end.dim {
+    opacity: 0.35;
+  }
+  .tip {
+    position: absolute;
+    top: 2px;
+    transform: translateX(10px);
+    display: grid;
+    gap: 1px;
+    padding: 6px 9px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    box-shadow: 0 0 0 1px var(--line-2), var(--shadow);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums;
+    transition: left 90ms var(--ease-out);
+    animation: tip-in 160ms var(--ease-out) backwards;
+  }
+  .tip.flip {
+    transform: translateX(calc(-100% - 10px));
+  }
+  .tip b {
+    color: var(--fg);
+    font-weight: 500;
+  }
+  @keyframes tip-in {
+    from {
+      opacity: 0;
+      scale: 0.96;
+    }
+  }
+
   text {
     font-family: var(--font-body);
     font-size: 10.5px;
@@ -285,8 +458,14 @@
     .bars rect,
     .dot,
     .end,
-    .halo {
+    .halo,
+    .cdot,
+    .tip {
       animation: none;
+    }
+    .cur,
+    .tip {
+      transition: none;
     }
     .m7,
     .wk {

@@ -636,11 +636,11 @@
           {@render fieldError('red_flags')}
         </section>
 
-        <section class="card rise" style:--i={5}>
+        <section class="card rise savecard" style:--i={5}>
           <div class="savebar">
             <div>
               <b>{view.check.answers || savedOk ? `Saved for ${missionDayLabel(view.mission_day).toLowerCase()}` : 'Not saved yet'}</b>
-              <div class="small muted">A second save for the same day replaces the first.</div>
+              <div class="small muted hint">A second save for the same day replaces the first.</div>
             </div>
             <button
               type="submit"
@@ -659,7 +659,11 @@
             </button>
           </div>
           {#if error}
-            <p class="banner error" role="alert">{errorText(error)}</p>
+            <p class="banner error" role="alert">
+              {error.kind === 'validation' && error.errors.length > 0
+                ? `${error.errors.length === 1 ? '1 field has' : `${error.errors.length} fields have`} an error. Correct ${error.errors.length === 1 ? 'it' : 'them'}, then save again.`
+                : errorText(error)}
+            </p>
           {/if}
         </section>
       </div>
@@ -1101,6 +1105,51 @@
   }
   .savebar b {
     font-weight: 500;
+  }
+  @media (max-width: 999px) {
+    form {
+      padding-bottom: 76px;
+    }
+    .savecard {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+      z-index: 25;
+      gap: 8px;
+      padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+      border-radius: 0;
+      background: color-mix(in srgb, var(--bg) 84%, transparent);
+      backdrop-filter: blur(18px) saturate(1.4);
+      -webkit-backdrop-filter: blur(18px) saturate(1.4);
+      box-shadow: 0 -1px 0 var(--line);
+      animation: bar-up 320ms var(--ease-out) backwards;
+    }
+    .savecard .savebar {
+      flex-wrap: nowrap;
+    }
+    .savecard .savebar > div {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+    }
+    .savecard .hint {
+      display: none;
+    }
+    .savecard .save {
+      width: auto;
+      min-width: 0;
+      flex: none;
+      min-height: 46px;
+      padding: 10px 20px;
+      font-size: 15px;
+    }
+  }
+  @keyframes bar-up {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
   }
   .save {
     min-width: 230px;

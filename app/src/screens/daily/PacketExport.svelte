@@ -1,4 +1,5 @@
 <script lang="ts">
+  const WEB = import.meta.env.MODE === 'web';
   import { exportPacket, pickExportPath } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
   import { missionDayLabel } from '../../lib/format';
@@ -164,8 +165,8 @@
           <p class="banner error" role="alert">The export failed. {errorText(exportError)}</p>
         {/if}
         <p class="small muted">
-          The packet is a summary for the flight surgeon on Earth. It is one JSON file. The
-          application asks for the file path.
+          The packet is a summary for the flight surgeon on Earth. It is one JSON file.
+          {WEB ? 'The browser downloads the file.' : 'The application asks for the file path.'}
         </p>
       </section>
 
