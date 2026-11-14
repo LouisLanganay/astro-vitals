@@ -24,6 +24,7 @@ fn main() {
             commands::load_scenario,
             commands::get_settings,
             commands::set_settings,
+            commands::rules,
         ])
         .run(tauri::generate_context!())
         .expect("the application failed to start");

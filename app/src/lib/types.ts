@@ -92,6 +92,18 @@ export type Indicator = (typeof INDICATORS)[number];
 export const SCENARIO_IDS = ['healthy', 'sleep_debt', 'vision'] as const;
 export type ScenarioId = (typeof SCENARIO_IDS)[number];
 
+export const RULE_KINDS = [
+  'absolute',
+  'drift',
+  'symptom_duration',
+  'symptom_recurrence',
+  'symptom_unresolved',
+  'red_flag',
+  'vision_change',
+  'vision_persistent',
+] as const;
+export type RuleKind = (typeof RULE_KINDS)[number];
+
 export type TaskKind = 'daily_check' | 'pvt' | 'vision_test';
 
 export interface Symptom {
@@ -180,6 +192,31 @@ export type RuleSubject =
   | { type: 'indicator'; value: Indicator }
   | { type: 'symptom'; value: SymptomKind }
   | { type: 'red_flag'; value: RedFlagKind };
+
+export interface DriftLevels {
+  self_care: number;
+  tell_cmo: number;
+}
+
+export interface RuleInfo {
+  id: string;
+  indicator: string;
+  kind: RuleKind;
+  level: Level;
+  threshold: number | null;
+  window_days: number | null;
+  min_days: number | null;
+  sustain_days: number | null;
+  body_region: BodyRegion | null;
+  action: string;
+  explanation: string;
+  source: string;
+}
+
+export interface RuleCatalog {
+  drift: DriftLevels;
+  rules: RuleInfo[];
+}
 
 export interface FiredRule {
   rule_id: string;
