@@ -167,6 +167,12 @@
   }
 
   $effect(() => {
+    const root = document.documentElement;
+    root.toggleAttribute('data-test-running', phase === 'running');
+    return () => root.removeAttribute('data-test-running');
+  });
+
+  $effect(() => {
     if (phase === 'running') target?.focus();
   });
 

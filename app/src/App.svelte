@@ -389,6 +389,13 @@
     color: var(--fg);
     background: none;
   }
+  .nav {
+    transition: transform 240ms var(--ease-out);
+  }
+  :global(html[data-test-running]) .nav {
+    transform: translateY(110%);
+    pointer-events: none;
+  }
   .item .long {
     position: absolute;
     width: 1px;
@@ -442,6 +449,11 @@
       align-self: start;
       padding-top: 34px;
       gap: 28px;
+    }
+    .nav,
+    :global(html[data-test-running]) .nav {
+      transform: none;
+      pointer-events: auto;
     }
     .nav {
       position: relative;
