@@ -41,7 +41,7 @@ export function LevelIcon({ state, size = 9 }: { state: IndicatorState; size?: n
   return <SvgXml xml={xml} width={size} height={size} />;
 }
 
-export function LevelBadge({ state, large = false }: { state: IndicatorState; large?: boolean }) {
+export function LevelBadge({ state, large = false, text }: { state: IndicatorState; large?: boolean; text?: string }) {
   const color = LEVEL_COLOR[state];
   return (
     <View
@@ -50,7 +50,7 @@ export function LevelBadge({ state, large = false }: { state: IndicatorState; la
     >
       <LevelIcon state={state} size={large ? 10 : 8} />
       <T v={large ? 'body' : 'small'} color={color} style={s.chipText}>
-        {STATE_LABEL[state]}
+        {text ? `${text}: ${STATE_LABEL[state]}` : STATE_LABEL[state]}
       </T>
     </View>
   );
