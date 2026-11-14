@@ -266,7 +266,7 @@
             {app.loading ? 'Loading the data of today...' : 'The data of today is not available.'}
           </p>
         {:else}
-          <p class="muted">Ready when you are.</p>
+          <p class="muted">Start the test when you are ready.</p>
         {/if}
       </div>
 
@@ -290,7 +290,7 @@
             {shown || phase === 'cancelled' ? 'Start the test again' : 'Start the test'}
           </button>
           {#if phase === 'done'}
-            <button class="btn" onclick={() => navigate('home')}>Go to the home screen</button>
+            <button class="btn" onclick={() => navigate('home')}>Go to Today</button>
           {/if}
           {#if shown && phase !== 'done'}
             <span class="small muted">A new test replaces the result of today.</span>
