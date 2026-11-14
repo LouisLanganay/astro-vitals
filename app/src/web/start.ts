@@ -102,7 +102,7 @@ function banner() {
   const note = document.createElement('p');
   note.className = 'web-demo-note';
   note.setAttribute('role', 'note');
-  note.textContent = 'Web demo';
+  note.textContent = 'Web demo. Your data stays in this browser.';
   document.body.append(note);
 }
 
