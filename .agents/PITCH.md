@@ -83,7 +83,7 @@ We want to be clear about what the tool does not do. A flight surgeon must revie
 
 **On screen**
 - La Coflop, NASA Space Apps Challenge 2026, Paris.
-- [Team members: names and roles]
+- Elwann, Louis, Ravenne, Seb, Tug: developers.
 - Built with Rust, Tauri 2 and Svelte 5.
 
 **Speaker notes**
