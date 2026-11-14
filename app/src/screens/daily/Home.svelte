@@ -521,7 +521,7 @@
 
   .vitals {
     display: grid;
-    gap: 16px;
+    gap: 0 56px;
     grid-template-columns: minmax(0, 1fr);
   }
   @media (min-width: 640px) {
