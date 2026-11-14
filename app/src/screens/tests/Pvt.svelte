@@ -198,7 +198,7 @@
     lit ? String(Math.round(live)) : lastRt ?? (feedback === 'Too early' ? 'FS' : ''),
   );
   const message = $derived(
-    lit ? 'Press now' : feedback === 'Too early' ? 'False start. Wait for the signal.' : feedback === 'No input' ? 'No input: a lapse.' : 'Wait for the signal.',
+    lit ? (touch ? 'Tap now' : 'Press now') : feedback === 'Too early' ? 'False start. Wait for the signal.' : feedback === 'No input' ? 'No input: a lapse.' : 'Wait for the signal.',
   );
 
   $effect(() => {

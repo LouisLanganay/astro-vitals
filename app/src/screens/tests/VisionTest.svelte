@@ -24,6 +24,12 @@
   let settings = $state<Settings | null>(null);
   let loadError = $state<AppError | null>(null);
   let step = $state<Step>('intro');
+
+  $effect(() => {
+    const root = document.documentElement;
+    root.toggleAttribute('data-test-running', step === 'acuity' || step === 'amsler');
+    return () => root.removeAttribute('data-test-running');
+  });
   let eyeIndex = $state(0);
   let busy = $state(false);
   let error = $state<AppError | null>(null);

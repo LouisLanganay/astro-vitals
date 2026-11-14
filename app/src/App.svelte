@@ -56,6 +56,7 @@
   let navEl = $state<HTMLElement>();
   let headEl = $state<HTMLElement>();
   let scrolled = $state(false);
+  let stuck = $state(false);
   let pill = $state({ x: 0, y: 0, w: 0, h: 0, ready: false });
   let moreOpen = $state(false);
   let moreBtn = $state<HTMLButtonElement>();
@@ -117,6 +118,9 @@
 
   onMount(() => {
     refresh();
+    const onScroll = () => (stuck = window.scrollY > 2);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
     const wide = matchMedia('(min-width: 1000px)');
     const onWide = () => wide.matches && closeMore(false);
     wide.addEventListener('change', onWide);
@@ -128,6 +132,7 @@
     );
     if (headEl) io.observe(headEl);
     return () => {
+      window.removeEventListener('scroll', onScroll);
       wide.removeEventListener('change', onWide);
       ro.disconnect();
       io.disconnect();
@@ -147,7 +152,7 @@
   </main>
 {:else}
   <div class="app">
-    <aside class="rail">
+    <aside class="rail" class:stuck>
       <div class="brand">
         <span class="mark">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -364,7 +369,7 @@
     opacity: 0;
     transition: opacity var(--t-fast) var(--ease-out);
   }
-  .rail:has(.ctitle.in)::before {
+  .rail.stuck::before {
     opacity: 1;
   }
   .phead {
