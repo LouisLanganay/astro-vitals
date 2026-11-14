@@ -1,10 +1,13 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
 
-  import { savePvt } from '../../lib/api';
+  import { savePvt, series } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
+  import Icon from '../../lib/Icon.svelte';
   import { INDICATOR_INFO } from '../../lib/labels';
   import LevelBadge from '../../lib/LevelBadge.svelte';
+  import MiniBars from '../../lib/MiniBars.svelte';
+  import { addDays } from '../../lib/mission';
   import { app, navigate, refresh } from '../../lib/state.svelte';
   import {
     PVT_DURATION_MS,
@@ -18,6 +21,7 @@
     type IsoDate,
     type PvtResult,
     type PvtTrial,
+    type Series,
   } from '../../lib/types';
 
   type Phase = 'intro' | 'running' | 'saving' | 'done' | 'cancelled' | 'failed';
@@ -166,7 +170,52 @@
   });
 
   onDestroy(clear);
+
+  // Display only, outside the measurement: a counter that runs while the signal shows. It
+  // reads stimulusAt and never writes any value that the test records.
+  const BAR_DAYS = 10;
+  let live = $state(0);
+  let history = $state.raw<Series | null>(null);
+
+  $effect(() => {
+    if (!lit) return;
+    let raf = 0;
+    const tick = () => {
+      live = Math.max(0, performance.now() - stimulusAt);
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(raf);
+  });
+
+  const lastRt = $derived(/^(\d+) ms$/.exec(feedback)?.[1] ?? null);
+  const count = $derived(
+    lit ? String(Math.round(live)) : lastRt ?? (feedback === 'Too early' ? 'FS' : ''),
+  );
+  const message = $derived(
+    lit ? 'Press now' : feedback === 'Too early' ? 'False start. Wait for the signal.' : feedback === 'No input' ? 'No input: a lapse.' : 'Wait for the signal.',
+  );
+
+  // Mean reaction time of the last 10 days, read again after each refresh.
+  $effect(() => {
+    void app.revision;
+    let stale = false;
+    series('pvt_mean_rt_ms').then(
+      (s) => !stale && (history = s),
+      () => !stale && (history = null),
+    );
+    return () => (stale = true);
+  });
+  const lastDays = $derived.by(() => {
+    const today = app.day?.mission.today;
+    if (!history || !today) return [];
+    const byDate = new Map(history.points.map((p) => [p.date, p.value]));
+    return Array.from({ length: BAR_DAYS }, (_, k) => byDate.get(addDays(today, k - BAR_DAYS + 1)) ?? null);
+  });
+  const rtState = $derived(stateOf('pvt_mean_rt_ms') ?? 'not_enough_data');
+  const secondsLeft = $derived(Math.max(0, Math.ceil((PVT_DURATION_MS - elapsedMs) / 1000)));
 </script>
+
 
 <svelte:window onkeydown={key} onblur={() => cancel('The window lost focus.')} />
 <svelte:document
@@ -175,155 +224,287 @@
   }}
 />
 
-<section>
-  <h1>PVT-B reaction test</h1>
-
-  {#if phase === 'running'}
-    <progress max={PVT_DURATION_MS} value={elapsedMs} aria-label="Test progress"></progress>
-    <button class="target" class:lit bind:this={target} onpointerdown={input}>
-      {lit ? 'Press now' : feedback || 'Wait for the signal'}
-    </button>
-    <p class="muted">
-      Press the Space key or click the box when the signal shows. Press Escape to cancel the test.
+<div class="grid g-7-5">
+  <section class="card" aria-labelledby="p-t">
+    <header>
+      <div class="ttl">
+        <span class="ic"><Icon name="bolt" /></span>
+        <h2 id="p-t">Reaction test</h2>
+      </div>
+      <span class="eyebrow">Optional, one each day</span>
+    </header>
+    <p>
+      The signal is a counter. It shows after a random wait of {PVT_INTERVAL_MIN_MS / 1000} to
+      {PVT_INTERVAL_MAX_MS / 1000} seconds. Click the box or press the Space key as soon as you see
+      it. The test runs for {PVT_DURATION_MS / 60000} minutes.
     </p>
-  {:else if phase === 'saving'}
-    <p class="muted" role="status">The test is complete. Saving the result...</p>
-  {:else}
-    {#if phase === 'cancelled'}
-      <p class="banner warn" role="alert">{cancelReason} The test stopped. No data was saved.</p>
-    {:else if phase === 'failed' && error}
-      <div class="banner error" role="alert">
-        <span>The result was not saved. {errorText(error)}</span>
-        <span class="row">
-          <button class="btn primary" onclick={finish}>Save again</button>
-          <button class="btn" onclick={discard}>Discard the test</button>
-        </span>
-      </div>
-    {/if}
 
-    {#if shown}
-      <div class="card result">
-        <h2>{phase === 'done' ? 'Your result' : 'Result of today'}</h2>
-        <dl class="grid">
-          {#each rows(shown) as row (row.indicator)}
-            {@const state = stateOf(row.indicator)}
-            <div class="stat">
-              <dt>{INDICATOR_INFO[row.indicator].label}</dt>
-              <dd class="value">{row.value}</dd>
-              {#if state}
-                <dd><LevelBadge {state} /></dd>
-              {/if}
-              <dd class="muted">{row.help}</dd>
-            </div>
-          {/each}
-        </dl>
-        <p class="muted">The test showed {shown.stimuli} signals.</p>
-        {#if phase === 'done'}
-          <div class="row">
-            <button class="btn primary" onclick={() => navigate('home')}>
-              Go to the home screen
-            </button>
-          </div>
-        {/if}
+    {#if phase === 'running'}
+      <button class="stage live" class:lit bind:this={target} onpointerdown={input}>
+        <span class="count num" class:on={lit}>{count || ' '}</span>
+        <span class="msg" class:go={lit}>{message}</span>
+      </button>
+      <div class="run">
+        <progress max={PVT_DURATION_MS} value={elapsedMs} aria-label="Test progress"></progress>
+        <span class="small muted num">{secondsLeft} s left</span>
       </div>
-    {/if}
-
-    {#if phase !== 'failed'}
-      <div class="card intro">
-        <h2>How the test works</h2>
-        <p>
-          This test measures how fast you react. Slow reactions and missed signals are signs of
-          tiredness.
-        </p>
-        <ol>
-          <li>The test continues for {PVT_DURATION_MS / 60000} minutes.</li>
-          <li>
-            Look at the box and wait. The signal shows after a random time of
-            {PVT_INTERVAL_MIN_MS / 1000} to {PVT_INTERVAL_MAX_MS / 1000} seconds.
-          </li>
-          <li>
-            When the box changes and shows "Press now", press the Space key or click the box
-            immediately.
-          </li>
-          <li>Do not press before the signal. An early input is a false start.</li>
-          <li>
-            Keep this window in front. If the window loses focus, the test stops and saves no data.
-          </li>
-        </ol>
-        {#if shown}
-          <p class="muted">A new test replaces the result of today.</p>
-        {/if}
-        {#if !app.day}
+      <div class="btns">
+        <button class="btn" onclick={() => cancel('You cancelled the test.')}>Cancel the test</button>
+        <span class="small muted">Escape also cancels.</span>
+      </div>
+    {:else}
+      <div class="stage">
+        {#if phase === 'saving'}
+          <p class="muted" role="status">The test is complete. Saving the result...</p>
+        {:else if phase === 'done'}
+          <p class="pop">Test complete.</p>
+        {:else if !app.day}
           <p class="muted" role="status">
             {app.loading ? 'Loading the data of today...' : 'The data of today is not available.'}
           </p>
+        {:else}
+          <p class="muted">Ready when you are.</p>
         {/if}
-        <div class="row">
+      </div>
+
+      {#if phase === 'cancelled'}
+        <p class="banner warn rise" role="alert">
+          {cancelReason} The test stopped. No data was saved.
+        </p>
+      {:else if phase === 'failed' && error}
+        <div class="banner error rise" role="alert">
+          <span>The result was not saved. {errorText(error)}</span>
+          <span class="btns">
+            <button class="btn sm primary" onclick={finish}>Save again</button>
+            <button class="btn sm" onclick={discard}>Discard the test</button>
+          </span>
+        </div>
+      {/if}
+
+      {#if phase !== 'failed' && phase !== 'saving'}
+        <div class="btns">
           <button class="btn primary" onclick={start} disabled={!app.day}>
             {shown || phase === 'cancelled' ? 'Start the test again' : 'Start the test'}
           </button>
+          {#if phase === 'done'}
+            <button class="btn" onclick={() => navigate('home')}>Go to the home screen</button>
+          {/if}
+          {#if shown && phase !== 'done'}
+            <span class="small muted">A new test replaces the result of today.</span>
+          {/if}
         </div>
+      {/if}
+    {/if}
+
+    {#if shown && phase !== 'running'}
+      <div aria-live="polite">
+        <span class="lbl">
+          {phase === 'done' ? 'Your result, saved for today' : 'Result of today'} ·
+          {shown.stimuli} signals
+        </span>
+        <dl class="res">
+          {#each rows(shown) as row, i (row.indicator)}
+            {@const state = stateOf(row.indicator)}
+            <div class="tile rise" style:--i={i}>
+              <dt>{INDICATOR_INFO[row.indicator].label}</dt>
+              <dd class="v num">{row.value}</dd>
+              {#if state}
+                <dd class="st"><LevelBadge {state} /></dd>
+              {/if}
+              <dd class="help">{row.help}</dd>
+            </div>
+          {/each}
+        </dl>
       </div>
     {/if}
-  {/if}
-</section>
+
+    <p class="small muted">
+      Lapse: a response of {PVT_LAPSE_MS} ms or more. False start: an input before the signal, or a
+      response under {PVT_FALSE_START_MS} ms. No input for {PVT_TIMEOUT_MS / 1000} seconds counts as
+      a lapse. If this window loses focus, the test stops and saves nothing.
+    </p>
+  </section>
+
+  <div class="stack">
+    <section class="card" aria-labelledby="p-h">
+      <header>
+        <h2 id="p-h">Last {BAR_DAYS} days</h2>
+        {#if rtState !== 'ok' && rtState !== 'not_enough_data'}
+          <LevelBadge state={rtState} />
+        {:else}
+          <span class="eyebrow">Dashed line: your baseline</span>
+        {/if}
+      </header>
+      <span class="eyebrow">Mean reaction time</span>
+      {#if lastDays.some((v) => v != null)}
+        <MiniBars
+          values={lastDays}
+          baseline={history?.baseline?.median ?? null}
+          state={rtState}
+          label="Mean reaction time of the last {BAR_DAYS} days"
+          width={420}
+          height={96}
+        />
+      {:else}
+        <p class="muted">No result in the last {BAR_DAYS} days.</p>
+      {/if}
+    </section>
+
+    <section class="card" aria-labelledby="p-w">
+      <header><h2 id="p-w">How the test works</h2></header>
+      <p class="muted">
+        This test measures how fast you react. Slow reactions and missed signals are signs of
+        tiredness.
+      </p>
+      <ol class="steps">
+        <li>Look at the box and wait for the signal.</li>
+        <li>When the counter shows, press the Space key or click the box at once.</li>
+        <li>Do not press before the signal. An early input is a false start.</li>
+        <li>Keep this window in front for the {PVT_DURATION_MS / 60000} minutes.</li>
+      </ol>
+    </section>
+  </div>
+</div>
 
 <style>
-  progress {
+  .stage {
+    position: relative;
+    overflow: hidden;
+    min-height: 280px;
     width: 100%;
-    accent-color: var(--accent);
-  }
-  .target {
-    display: grid;
-    place-items: center;
-    width: 100%;
-    height: 55vh;
-    min-height: 14rem;
-    border: 3px dashed var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    color: var(--muted);
+    border: 0;
+    border-radius: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    text-align: center;
+    color: var(--fg);
     font: inherit;
-    font-size: 1.5rem;
-    font-variant-numeric: tabular-nums;
-    cursor: pointer;
     user-select: none;
+    -webkit-user-select: none;
     touch-action: manipulation;
+    background: radial-gradient(120% 90% at 50% 0%, var(--well-2), var(--bg) 75%);
+    box-shadow: inset 0 0 0 1px var(--line);
   }
-  .target.lit {
-    border: 3px solid var(--accent);
-    background: var(--accent);
-    color: #fff;
-    font-size: 3rem;
-    font-weight: 700;
+  .stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.6;
+    background-image: radial-gradient(var(--line-2) 1px, transparent 1.2px);
+    background-size: 20px 20px;
   }
-  .result,
-  .intro {
-    display: grid;
-    gap: 0.75rem;
+  .stage > :global(*) {
+    position: relative;
   }
-  ol {
-    margin: 0;
-    padding-left: 1.25rem;
-    display: grid;
-    gap: 0.3rem;
+  .stage.live {
+    min-height: max(280px, 50vh);
+    cursor: pointer;
   }
-  dl,
-  dd {
-    margin: 0;
+  /* The signal shows at once: no transition on the stage, the counter or the message. */
+  .stage.live.lit {
+    box-shadow: inset 0 0 0 2px var(--ui);
   }
-  .stat {
-    display: grid;
-    gap: 0.3rem;
-    align-content: start;
-    justify-items: start;
-  }
-  dt {
-    font-weight: 600;
-  }
-  .value {
-    font-size: 1.6rem;
-    font-weight: 700;
+  .count {
+    font-size: 104px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.055em;
     font-variant-numeric: tabular-nums;
+  }
+  /* Scale only, never opacity: the counter is fully visible on its first frame. */
+  .count.on {
+    animation: stim-pop var(--t-fast) var(--ease-out);
+  }
+  .msg {
+    font-size: 15px;
+    color: var(--muted);
+  }
+  .msg.go {
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .run {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  progress {
+    flex: 1;
+    height: 6px;
+    border: 0;
+    border-radius: 3px;
+    background: var(--well-2);
+    overflow: hidden;
+    appearance: none;
+  }
+  progress::-webkit-progress-bar {
+    background: var(--well-2);
+  }
+  progress::-webkit-progress-value {
+    background: linear-gradient(90deg, var(--ui-2), var(--ui));
+    border-radius: 3px;
+  }
+  progress::-moz-progress-bar {
+    background: linear-gradient(90deg, var(--ui-2), var(--ui));
+    border-radius: 3px;
+  }
+  .res {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--well);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .tile dt {
+    font-size: 12.5px;
+    color: var(--muted);
+    order: 2;
+  }
+  .tile .v {
+    font-family: var(--font-body);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 1.15;
+    order: 1;
+  }
+  .tile .st {
+    order: 3;
+    margin-top: 4px;
+  }
+  .tile .help {
+    order: 4;
+    font-size: 12px;
+    color: var(--faint);
+  }
+  .steps {
+    list-style: decimal;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 6px;
+  }
+  .steps li::marker {
+    color: var(--muted);
+  }
+  @keyframes stim-pop {
+    from {
+      transform: scale(0.94);
+    }
+    to {
+      transform: none;
+    }
   }
 </style>

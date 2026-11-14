@@ -12,6 +12,7 @@
   import { ruleFact, ruleTitle } from '../../lib/rules';
   import { app, navigate, refresh } from '../../lib/state.svelte';
   import Ticker from '../../lib/Ticker.svelte';
+  import BodyMini from '../tests/BodyMini.svelte';
   import type { Indicator, IndicatorState, Level, Series } from '../../lib/types';
 
   const FLAGGED: IndicatorState[] = ['self_care', 'tell_cmo', 'flight_surgeon'];
@@ -366,28 +367,32 @@
           <h2 id="h-bd">Body</h2>
           <button class="btn sm" onclick={() => navigate('body')}>Open</button>
         </header>
-        <div class="bm-list">
-          {#each flaggedRegions as r, k (r.region)}
-            <button
-              class="bm-row rise"
-              style:--i={k}
-              onclick={() => navigate('body', { region: r.region })}
-            >
-              <span>{REGION_LABEL[r.region]}</span>
-              <LevelBadge state={r.level} />
-            </button>
-          {/each}
-          {#if assessment}
-            <div class="bm-count">
-              <div class="big">
-                <Ticker value={assessment.regions.length - flaggedRegions.length} /><small
-                  >of {assessment.regions.length}</small
-                >
+        <BodyMini
+          levels={Object.fromEntries((assessment?.regions ?? []).map((r) => [r.region, r.level]))}
+        >
+          <div class="bm-list">
+            {#each flaggedRegions as r, k (r.region)}
+              <button
+                class="bm-row rise"
+                style:--i={k}
+                onclick={() => navigate('body', { region: r.region })}
+              >
+                <span>{REGION_LABEL[r.region]}</span>
+                <LevelBadge state={r.level} />
+              </button>
+            {/each}
+            {#if assessment}
+              <div class="bm-count">
+                <div class="big">
+                  <Ticker value={assessment.regions.length - flaggedRegions.length} /><small
+                    >of {assessment.regions.length}</small
+                  >
+                </div>
+                <div class="small muted">regions with no flag</div>
               </div>
-              <div class="small muted">regions with no flag</div>
-            </div>
-          {/if}
-        </div>
+            {/if}
+          </div>
+        </BodyMini>
       </section>
     </div>
   </div>
