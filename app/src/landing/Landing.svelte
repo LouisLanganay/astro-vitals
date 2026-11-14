@@ -2,7 +2,11 @@
   import { onMount } from 'svelte';
   import { prefersReducedMotion } from 'svelte/motion';
 
+  import Icon from '../lib/Icon.svelte';
+  import type { IconName } from '../lib/icons';
+  import { MISSION_DAYS } from '../lib/mission';
   import { createScene, type Scene } from './scene';
+  import { AIRLOCK, ZONES } from './ship';
 
   let {
     oncovered,
@@ -14,12 +18,23 @@
 
   const COVER_MS = 340;
   const OUT_MS = 520;
+  const INFO: Record<number, { title: string; line: string; icon: IconName }> = {
+    1: { title: 'Airlock', line: 'Select to enter.', icon: 'chevron' },
+    2: { title: 'Habitat', line: 'Daily check: sleep, mood, fluid.', icon: 'check' },
+    3: { title: 'Gravity ring', line: 'Exercise keeps muscle and bone.', icon: 'dumbbell' },
+    4: { title: 'Solar arrays', line: `${MISSION_DAYS} days of transit to Mars.`, icon: 'sun' },
+    5: { title: 'Service module', line: 'Rules watch each value.', icon: 'rules' },
+  };
 
   let canvas = $state<HTMLCanvasElement>();
   let pin = $state<HTMLElement>();
   let cta = $state<HTMLButtonElement>();
   let hero = $state<HTMLElement>();
   let phase = $state<'idle' | 'leaving' | 'covered' | 'out'>('idle');
+  let panel = $state<HTMLElement>();
+  let zone = $state(0);
+  let corner = $state('tr');
+  let shown = $state(INFO[AIRLOCK]);
   let scene: Scene | null = null;
 
   const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -28,6 +43,35 @@
     if (!pin) return;
     pin.style.translate = `${x.toFixed(1)}px ${y.toFixed(1)}px`;
     pin.style.opacity = alpha.toFixed(3);
+  }
+
+  function place(x: number, y: number) {
+    if (!panel) return;
+    panel.style.translate = `${x.toFixed(1)}px ${y.toFixed(1)}px`;
+    const next = `${y < 170 ? 'b' : 't'}${x > window.innerWidth - 270 ? 'l' : 'r'}`;
+    if (next !== corner) corner = next;
+  }
+
+  function aim(next: number) {
+    if (next === zone) return;
+    zone = next;
+    if (next > 0) shown = INFO[ZONES[next - 1].id];
+    scene?.focus(next);
+  }
+
+  function hover(e: PointerEvent) {
+    if (phase === 'idle' && e.pointerType === 'mouse') aim(scene?.pick(e.clientX, e.clientY) ?? 0);
+  }
+
+  function tap(e: MouseEvent) {
+    if (phase !== 'idle') return;
+    const hit = scene?.pick(e.clientX, e.clientY) ?? 0;
+    if (hit > 0 && ZONES[hit - 1].id === AIRLOCK) enter();
+    else aim(hit === zone && (e as PointerEvent).pointerType !== 'mouse' ? 0 : hit);
+  }
+
+  function leave(e: PointerEvent) {
+    if (e.pointerType === 'mouse') aim(0);
   }
 
   function frame(wide: boolean) {
@@ -39,11 +83,23 @@
   }
 
   onMount(() => {
-    scene = createScene(canvas!, { reduced: prefersReducedMotion.current, frame, onanchor: anchor });
+    scene = createScene(canvas!, {
+      reduced: prefersReducedMotion.current,
+      frame,
+      onanchor: anchor,
+      onzone: place,
+    });
     const observer = new ResizeObserver(() => phase === 'idle' && scene?.refit());
     observer.observe(hero!);
+    const view = canvas!;
+    view.addEventListener('pointermove', hover);
+    view.addEventListener('pointerleave', leave);
+    view.addEventListener('click', tap);
     return () => {
       observer.disconnect();
+      view.removeEventListener('pointermove', hover);
+      view.removeEventListener('pointerleave', leave);
+      view.removeEventListener('click', tap);
       scene?.destroy();
     };
   });
@@ -54,6 +110,7 @@
       return;
     }
     if (phase !== 'idle') return;
+    aim(0);
     phase = 'leaving';
     await scene?.enter();
     phase = 'covered';
@@ -79,10 +136,22 @@
 <svelte:window onkeydown={key} onpointerdown={press} />
 
 <div class="landing" data-phase={phase}>
-  <canvas bind:this={canvas} aria-hidden="true"></canvas>
+  <canvas bind:this={canvas} class:hit={zone > 0} aria-hidden="true"></canvas>
   <div class="veil" aria-hidden="true"></div>
 
   <i class="pin" bind:this={pin} aria-hidden="true"></i>
+
+  <div class="tip" class:on={zone > 0} data-corner={corner} bind:this={panel} aria-hidden="true">
+    <i class="tip-dot"></i>
+    <i class="tip-line"></i>
+    <div class="tip-card">
+      <span class="ic"><Icon name={shown.icon} size={17} /></span>
+      <span class="tip-txt">
+        <b>{shown.title}</b>
+        <span>{shown.line}</span>
+      </span>
+    </div>
+  </div>
 
   <header class="top">
     <span class="mark">
@@ -137,6 +206,110 @@
     width: 100%;
     height: 100%;
     display: block;
+  }
+
+  canvas.hit {
+    cursor: pointer;
+  }
+
+  .tip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 160ms var(--ease-out);
+  }
+  .tip.on {
+    opacity: 1;
+  }
+  .tip-dot {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--fg);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--ui) 45%, transparent);
+  }
+  .tip-line {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 46px;
+    height: 1.5px;
+    background: linear-gradient(90deg, var(--fg), var(--line-2));
+    transform-origin: 0 50%;
+    rotate: -45deg;
+    scale: 0 1;
+    transition: scale 220ms var(--ease-out);
+  }
+  .tip.on .tip-line {
+    scale: 1 1;
+  }
+  .tip-card {
+    position: absolute;
+    left: 32px;
+    bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: max-content;
+    max-width: 300px;
+    padding: 11px 16px 11px 11px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, var(--card-b), var(--card-a));
+    box-shadow:
+      inset 0 0 0 1px var(--line-2),
+      var(--shadow);
+    scale: 0.94;
+    transform-origin: 0 100%;
+    transition: scale 240ms var(--ease-spring);
+  }
+  .tip.on .tip-card {
+    scale: 1;
+  }
+  .tip-txt {
+    display: grid;
+    gap: 2px;
+  }
+  .tip-txt b {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tip-txt span {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+  .tip[data-corner='tl'] .tip-line {
+    rotate: -135deg;
+  }
+  .tip[data-corner='tl'] .tip-card {
+    left: auto;
+    right: 32px;
+    transform-origin: 100% 100%;
+  }
+  .tip[data-corner='br'] .tip-line {
+    rotate: 45deg;
+  }
+  .tip[data-corner='br'] .tip-card {
+    bottom: auto;
+    top: 32px;
+    transform-origin: 0 0;
+  }
+  .tip[data-corner='bl'] .tip-line {
+    rotate: 135deg;
+  }
+  .tip[data-corner='bl'] .tip-card {
+    inset: 32px 32px auto auto;
+    transform-origin: 100% 0;
   }
 
   .veil {
@@ -294,7 +467,8 @@
       opacity 260ms var(--ease-out),
       translate 260ms var(--ease-out);
   }
-  .landing:not([data-phase='idle']) .pin {
+  .landing:not([data-phase='idle']) .pin,
+  .landing:not([data-phase='idle']) .tip {
     opacity: 0 !important;
   }
 

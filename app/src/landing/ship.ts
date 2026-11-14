@@ -6,6 +6,34 @@ export const CENTER: Vec3 = [0, 0, -0.25];
 
 export type Vec3 = [number, number, number];
 
+export interface Zone {
+  id: number;
+  anchor: Vec3;
+  samples: Vec3[];
+  radius: number;
+}
+
+export const AIRLOCK = 1;
+const HABITAT = 2;
+const GRAVITY_RING = 3;
+const ARRAYS = 4;
+const SERVICE = 5;
+
+const around = (count: number, radius: number, z: number): Vec3[] =>
+  Array.from({ length: count }, (_, i) => {
+    const a = (i / count) * Math.PI * 2;
+    return [radius * Math.cos(a), radius * Math.sin(a), z];
+  });
+
+export const ZONES: Zone[] = [
+  { id: AIRLOCK, anchor: [0, 0, 5], samples: [[0, 0, 5], [0, 0, 4.5], [0, 0, 4]], radius: 0.85 },
+  { id: HABITAT, anchor: [0, 0, 2.2], samples: [[0, 0, 3], [0, 0, 2.4], [0, 0, 1.8], [0, 0, 1.2]], radius: 1.3 },
+  { id: GRAVITY_RING, anchor: [0, 2.7, -1], samples: around(20, 2.7, -1), radius: 0.5 },
+  { id: ARRAYS, anchor: [2.9, 0, -3.95], samples: [[1.8, 0, -3.95], [2.9, 0, -3.95], [4, 0, -3.95]], radius: 0.7 },
+  { id: ARRAYS, anchor: [-2.9, 0, -3.95], samples: [[-1.8, 0, -3.95], [-2.9, 0, -3.95], [-4, 0, -3.95]], radius: 0.7 },
+  { id: SERVICE, anchor: [0, 0, -4], samples: [[0, 0, -3.4], [0, 0, -4], [0, 0, -4.6], [0, 0, -5.2]], radius: 1 },
+];
+
 export interface Cloud {
   data: Float32Array;
   count: number;
@@ -96,13 +124,14 @@ class Mesh {
 
 class Builder {
   out: number[] = [];
+  zone = 0;
   random = generator(20261114);
 
   add(p: Vec3, n: Vec3, o: Options = {}) {
     this.out.push(
       p[0], p[1], p[2],
       n[0], n[1], n[2],
-      o.size ?? DOT, this.random(), o.aux ?? 0, 0,
+      o.size ?? DOT, this.random(), o.aux ?? 0, this.zone,
       o.spin ? 1 : 0, o.accent ?? 0, o.group ?? HULL, o.side ?? ONE_SIDE,
     );
   }
@@ -230,19 +259,26 @@ function hatch(b: Builder) {
 function exterior(b: Builder, m: Mesh) {
   const radial = (a: number): Vec3 => [Math.cos(a), Math.sin(a), 0];
 
+  const zones = [AIRLOCK, AIRLOCK, HABITAT, HABITAT, GRAVITY_RING, SERVICE, SERVICE, SERVICE, SERVICE];
+
+  b.zone = AIRLOCK;
   hatch(b);
   disc(b, NOSE_Z, 0.62, 0.72, 1);
   ring(b, NOSE_Z + 0.02, 0.67, 24, () => [0, 0, 1], (a) => ({ accent: 2, aux: a, size: DOT * 1.25 }));
   for (let i = 0; i < PROFILE.length - 1; i++) {
     const [z0, r0] = PROFILE[i];
     const [z1, r1] = PROFILE[i + 1];
+    b.zone = zones[i];
     shell(b, z0, z1, r0, r1, {}, false, STEP, i === PROFILE.length - 2);
     m.band(z0, z1, r0 * SHRINK, r1 * SHRINK);
   }
+  b.zone = HABITAT;
   ring(b, 2.75, 1.262, 14, radial, () => ({ accent: 1, size: DOT * 1.5 }));
   ring(b, 1.55, 1.262, 14, radial, () => ({ accent: 1, size: DOT * 1.5 }));
+  b.zone = SERVICE;
   ring(b, -3.95, 0.912, 10, radial, () => ({ accent: 1, size: DOT * 1.3 }));
 
+  b.zone = GRAVITY_RING;
   torus(b, RING.z, RING.major, RING.minor, { spin: true });
   m.torus(RING.z, RING.major, RING.minor * SHRINK);
   ring(b, RING.z, RING.major + RING.minor + 0.012, 32, radial, () => ({ accent: 1, spin: true, size: DOT * 1.3 }));
@@ -258,6 +294,7 @@ function exterior(b: Builder, m: Mesh) {
     }
   }
 
+  b.zone = ARRAYS;
   for (const dir of [-1, 1]) {
     strut(b, [dir * 0.9, 0, -3.95], [dir * WING.from, 0, -3.95], { size: DOT * 0.85 });
     for (let k = 0; k < WING.count; k++) {
@@ -270,6 +307,7 @@ function exterior(b: Builder, m: Mesh) {
 }
 
 function interior(b: Builder) {
+  b.zone = 0;
   const o: Options = { group: INTERIOR, size: DOT * 0.9 };
   const radius = (z: number) => (z > 4.2 ? 0.6 : z > 3.4 ? 0.6 + ((4.2 - z) / 0.8) * 0.5 : 1.1);
   let index = 0;
