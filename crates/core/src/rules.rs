@@ -247,7 +247,10 @@ fn drift_min_days(rules: &RuleSet, indicator: Indicator) -> usize {
         .rules
         .iter()
         .filter(|r| r.kind == RuleKind::Drift && r.indicator == indicator)
-        .map(|r| r.min_days.map_or(baseline::DEFAULT_DRIFT_MIN_DAYS, |m| m as usize))
+        .map(|r| {
+            r.min_days
+                .map_or(baseline::DEFAULT_DRIFT_MIN_DAYS, |m| m as usize)
+        })
         .min()
         .unwrap_or(baseline::DEFAULT_DRIFT_MIN_DAYS)
 }
@@ -997,7 +1000,11 @@ window_days = 7
 min_days = 5
 level = "self_care"
 "#;
-        let src = format!("{}{}", rule_toml("sleep_3d", short), rule_toml("sleep_7d", long));
+        let src = format!(
+            "{}{}",
+            rule_toml("sleep_3d", short),
+            rule_toml("sleep_7d", long)
+        );
         let set = rules(&src);
         let data = data_of((4..7).map(|d| sleep_check(d, 480)));
         let result = evaluate(6, &data, &set, &Settings::default());
