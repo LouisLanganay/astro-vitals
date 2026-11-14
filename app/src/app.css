@@ -314,3 +314,17 @@ input[type='range']::-moz-range-thumb { width: 18px; height: 18px; border: 0; bo
   .card.lift:hover,
   .btn:active:not([disabled]) { transform: none; }
 }
+
+html .card.card {
+  padding: 26px 0 32px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  border-top: 1px solid var(--line-2);
+}
+@media (hover: hover) { html .card.card.lift:hover { transform: none; box-shadow: none; } }
+html .card > header h2 {
+  font-family: var(--font-data); font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+}
+html .card > header .ic { display: none; }
+html .grid, html .stack { gap: 0 56px; }

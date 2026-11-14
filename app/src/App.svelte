@@ -375,7 +375,7 @@
     grid-area: main;
     min-width: 0;
     display: grid;
-    gap: 16px;
+    gap: 0;
     align-content: start;
   }
   .foot {
