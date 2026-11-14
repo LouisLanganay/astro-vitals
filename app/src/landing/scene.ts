@@ -4,6 +4,7 @@ export interface Scene {
   refit(): void;
   pick(x: number, y: number): number;
   focus(zone: number): void;
+  hole(radius: number): void;
   enter(): Promise<void>;
   skip(): void;
   destroy(): void;
@@ -32,6 +33,7 @@ interface Shot {
   reveal: number;
   zone: number;
   glow: number;
+  hole: number;
 }
 
 interface Painter {
@@ -48,7 +50,8 @@ const FOV_INSIDE = 1.16;
 const LIGHT: Vec3 = normalize([-0.52, 0.66, 0.54]);
 const SWING = 1.35;
 const DIVE = 1.45;
-const COVER_LEAD = 0.34;
+const ARRIVE_LEAD = 0.1;
+const DRIFT = 1.7;
 const DIVE_FROM = NOSE_Z + 4.2;
 const DIVE_TO = TUNNEL_END_Z + 2.6;
 const LOOK_AHEAD = 4.2;
@@ -97,6 +100,8 @@ uniform float uMinPx;
 uniform float uMaxPx;
 uniform float uZone;
 uniform float uGlow;
+uniform float uHole;
+uniform float uAspect;
 varying float vAlpha;
 varying float vLit;
 varying float vAccent;
@@ -183,6 +188,13 @@ void main() {
   }
   gl_Position.xy += uShift * gl_Position.w;
   vAlpha = alpha * ratio * ratio;
+  if (uHole > 0.0 && gl_Position.w > 0.0) {
+    vec2 q = gl_Position.xy / gl_Position.w * vec2(uAspect, 1.0);
+    float rim = length(q) - uHole;
+    q += normalize(q + 0.00001) * exp(-max(rim, 0.0) * 5.0) * 0.1 * step(0.0, rim);
+    vAlpha *= 1.0 + 1.8 * exp(-abs(rim) * 9.0);
+    gl_Position.xy = q / vec2(uAspect, 1.0) * gl_Position.w;
+  }
   vLit = lit;
   vAccent = max(step(0.5, accent), 0.62 * hot);
 }
@@ -299,7 +311,7 @@ function glPainter(canvas: HTMLCanvasElement, cloud: Cloud): Painter | null {
   const colours = palette();
   const names = [
     'uView', 'uProj', 'uEye', 'uLight', 'uShift', 'uTime', 'uSpin', 'uOpen', 'uInside',
-    'uReveal', 'uScale', 'uMinPx', 'uMaxPx', 'uLo', 'uHi', 'uAcc', 'uZone', 'uGlow',
+    'uReveal', 'uScale', 'uMinPx', 'uMaxPx', 'uLo', 'uHi', 'uAcc', 'uZone', 'uGlow', 'uHole', 'uAspect',
   ];
   let dots: WebGLProgram | null = null;
   let solid: WebGLProgram | null = null;
@@ -411,6 +423,8 @@ function glPainter(canvas: HTMLCanvasElement, cloud: Cloud): Painter | null {
       gl.uniform1f(uniforms.uMaxPx, maxPoint);
       gl.uniform1f(uniforms.uZone, shot.zone);
       gl.uniform1f(uniforms.uGlow, shot.glow);
+      gl.uniform1f(uniforms.uHole, shot.hole);
+      gl.uniform1f(uniforms.uAspect, shot.aspect);
       gl.colorMask(true, true, true, true);
       gl.depthMask(false);
       gl.enable(gl.BLEND);
@@ -546,6 +560,7 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
   let zone = 0;
   let lit = -1;
   let glow = 0;
+  let hole = 0;
   let cam = { focal: 1, aspect: 1, shiftX: 0, shiftY: 0 };
 
   function project(p: Vec3) {
@@ -645,11 +660,12 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
       open = easeInOut(clamp((e - 0.7) / 0.85));
       if (e > SWING) {
         const u = clamp((e - SWING) / DIVE);
-        const z = lerp(DIVE_FROM, DIVE_TO, u * u * u);
+        const after = Math.max(0, e - SWING - DIVE);
+        const z = lerp(DIVE_FROM, DIVE_TO, u * u * u) - DRIFT * (1 - Math.exp(-after * 2.4));
         eye = [0, 0, z];
         target = [0, 0, z - LOOK_AHEAD];
         fov = lerp(FOV, FOV_INSIDE, u * u);
-        roll = easeInOut(u) * 0.7;
+        roll = easeInOut(u) * 0.7 + after * 0.35;
         inside = smooth(NOSE_Z + 1.2, NOSE_Z - 0.6, z);
       }
     } else {
@@ -694,6 +710,7 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
       reveal: animated ? clamp((t - 0.1) / 1.9) : 1,
       zone: lit,
       glow,
+      hole: hole / (height / 2),
     };
   }
 
@@ -712,11 +729,10 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
     paint();
     if (entered >= 0) {
       const e = clock - entered;
-      if (covered && e >= SWING + DIVE - COVER_LEAD) {
+      if (covered && e >= SWING + DIVE - ARRIVE_LEAD) {
         covered();
         covered = null;
       }
-      if (e >= SWING + DIVE + 0.6) return;
     }
     raf = requestAnimationFrame(tick);
   }
@@ -758,6 +774,9 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
     pick(x, y) {
       return entered >= 0 ? 0 : pick(x, y);
     },
+    hole(radius) {
+      hole = radius;
+    },
     focus(next) {
       zone = next;
       if (!animated) {
@@ -778,7 +797,7 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
     },
     skip() {
       if (entered < 0 || !covered) return;
-      entered = clock - (SWING + DIVE - COVER_LEAD);
+      entered = clock - (SWING + DIVE - ARRIVE_LEAD);
     },
     destroy() {
       stopped = true;

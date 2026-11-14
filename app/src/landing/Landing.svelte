@@ -16,8 +16,8 @@
     ondone: () => void;
   } = $props();
 
-  const COVER_MS = 340;
-  const OUT_MS = 520;
+  const OPEN_MS = 860;
+  const OPEN_EASE = 'cubic-bezier(0.62, 0, 0.18, 1)';
   const INFO: Record<number, { title: string; line: string; icon: IconName }> = {
     1: { title: 'Airlock', line: 'Select to enter.', icon: 'chevron' },
     2: { title: 'Habitat', line: 'Daily check: sleep, mood, fluid.', icon: 'check' },
@@ -30,14 +30,13 @@
   let pin = $state<HTMLElement>();
   let cta = $state<HTMLButtonElement>();
   let hero = $state<HTMLElement>();
-  let phase = $state<'idle' | 'leaving' | 'covered' | 'out'>('idle');
+  let phase = $state<'idle' | 'leaving' | 'opening' | 'out'>('idle');
+  let halo = $state<HTMLElement>();
   let panel = $state<HTMLElement>();
   let zone = $state(0);
   let corner = $state('tr');
   let shown = $state(INFO[AIRLOCK]);
   let scene: Scene | null = null;
-
-  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   function anchor(x: number, y: number, alpha: number) {
     if (!pin) return;
@@ -113,14 +112,66 @@
     aim(0);
     phase = 'leaving';
     await scene?.enter();
-    phase = 'covered';
-    await wait(prefersReducedMotion.current ? 0 : COVER_MS);
-    oncovered(reveal);
+    oncovered(prefersReducedMotion.current ? fade : open);
   }
 
-  function reveal() {
+  function fade() {
     phase = 'out';
-    setTimeout(ondone, prefersReducedMotion.current ? 0 : OUT_MS);
+    setTimeout(ondone, 0);
+  }
+
+  function open() {
+    const app = document.getElementById('app');
+    if (!app || !halo) {
+      fade();
+      return;
+    }
+    phase = 'opening';
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    const radius = Math.hypot(cx, cy) + 80;
+    const timing = { duration: OPEN_MS, easing: OPEN_EASE };
+    halo.style.width = halo.style.height = `${radius * 2}px`;
+    app.style.position = 'relative';
+    app.style.zIndex = '1001';
+    app.style.background = 'var(--bg)';
+    const iris = app.animate(
+      [
+        { clipPath: `circle(0px at ${cx}px ${cy}px)` },
+        { clipPath: `circle(${radius}px at ${cx}px ${cy}px)` },
+      ],
+      timing,
+    );
+    halo.animate(
+      [
+        { scale: 0, opacity: 1 },
+        { scale: 0.7, opacity: 1, offset: 0.7 },
+        { scale: 1, opacity: 0 },
+      ],
+      timing,
+    );
+    document.getElementById('view')?.animate(
+      [
+        { scale: 0.88, opacity: 0 },
+        { opacity: 1, offset: 0.5 },
+        { scale: 1, opacity: 1 },
+      ],
+      { duration: OPEN_MS + 160, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' },
+    );
+    let follow = 0;
+    const track = () => {
+      scene?.hole((iris.effect?.getComputedTiming().progress ?? 1) * radius);
+      follow = requestAnimationFrame(track);
+    };
+    track();
+    const end = () => {
+      cancelAnimationFrame(follow);
+      app.style.position = '';
+      app.style.zIndex = '';
+      app.style.background = '';
+      ondone();
+    };
+    iris.finished.then(end, end);
   }
 
   function key(e: KeyboardEvent) {
@@ -179,7 +230,7 @@
     <p class="note">Prototype, not a medical device.</p>
   </main>
 
-  <div class="cover" aria-hidden="true"></div>
+  <i class="halo" bind:this={halo} aria-hidden="true"></i>
 </div>
 
 <style>
@@ -445,17 +496,22 @@
     animation-delay: 1.4s;
   }
 
-  .cover {
+  .halo {
     position: absolute;
-    inset: 0;
-    background: var(--bg);
+    top: 50%;
+    left: 50%;
+    border: 2px solid color-mix(in srgb, var(--ui) 70%, var(--fg));
+    border-radius: 50%;
+    box-shadow:
+      0 0 46px 12px color-mix(in srgb, var(--ui) 60%, transparent),
+      inset 0 0 46px 12px color-mix(in srgb, var(--ui) 40%, transparent);
+    translate: -50% -50%;
+    scale: 0;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 340ms ease-in;
   }
-  .landing[data-phase='covered'] .cover,
-  .landing[data-phase='out'] .cover {
-    opacity: 1;
+  .landing[data-phase='opening'] {
+    pointer-events: none;
   }
 
   .landing:not([data-phase='idle']) .top,
