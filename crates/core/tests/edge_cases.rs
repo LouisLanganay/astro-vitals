@@ -366,6 +366,8 @@ fn a_red_flag_sets_flight_surgeon_with_no_window() {
         let a = at(&d, -10);
         assert_eq!(a.level, Level::FlightSurgeon, "{kind:?}");
         assert_eq!(a.fired[0].subject, RuleSubject::RedFlag(kind));
+        let flagged = a.regions.iter().filter(|r| r.level == a.level);
+        assert_eq!(flagged.count(), 1, "{kind:?}");
     }
 }
 

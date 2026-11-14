@@ -339,6 +339,7 @@ kind = "red_flag"
 level = "flight_surgeon"
 action = "Rest. Tell the Crew Medical Officer immediately. Export the summary packet for the flight surgeon."
 explanation = "Fever is a red flag. It needs a medical assessment immediately."
+body_region = "head"
 source = "https://www.nasa.gov/wp-content/uploads/2023/07/ochmo-tb-033-spaceflight-experience-medical-care-rev-c.pdf"
 
 [[rules]]

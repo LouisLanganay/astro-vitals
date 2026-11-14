@@ -142,6 +142,7 @@ fn check(rule: &Rule) -> Result<(), String> {
             if rule.level != Level::FlightSurgeon {
                 return Err("a red flag rule must have the level `flight_surgeon`".into());
             }
+            need(rule.body_region.is_some(), "body_region")?;
             red_flag(&rule.indicator).is_some()
         }
     };

@@ -64,6 +64,11 @@ fn each_rule_has_source_action_and_explanation() {
         assert!(rule.source.starts_with("https://"), "{}", rule.id);
         assert!(!rule.action.trim().is_empty(), "{}", rule.id);
         assert!(!rule.explanation.trim().is_empty(), "{}", rule.id);
+        assert!(
+            rule.kind != RuleKind::RedFlag || rule.body_region.is_some(),
+            "{}",
+            rule.id
+        );
     }
 }
 
