@@ -398,6 +398,12 @@
   .kv .num {
     overflow-wrap: anywhere;
   }
+  @media (max-width: 560px) {
+    .json {
+      max-height: 420px;
+      padding: 12px 14px;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .capbar i,
     .json,
