@@ -170,6 +170,16 @@ fn check_rule(rule: &Rule) -> Result<(), String> {
     if rule.window_days.is_some() && rule.min_days > rule.window_days {
         return Err("`min_days` must not be more than `window_days`".to_string());
     }
+    if rule.kind == RuleKind::Drift
+        && rule
+            .window_days
+            .is_some_and(|w| w != baseline::DRIFT_WINDOW_DAYS)
+    {
+        return Err(format!(
+            "`window_days` must be {} for a drift rule",
+            baseline::DRIFT_WINDOW_DAYS
+        ));
+    }
     if rule.kind == RuleKind::Drift && rule.min_days > Some(baseline::DRIFT_WINDOW_DAYS) {
         return Err(format!(
             "`min_days` must not be more than {} for a drift rule",
@@ -731,8 +741,16 @@ treshold = 2.5
 window_days = 3
 level = "self_care"
 "#;
+        let drift_window = r#"
+indicator = "mood"
+kind = "drift"
+threshold = 2.0
+window_days = 14
+level = "self_care"
+"#;
         let cases = [
             ("drift", missing_threshold),
+            ("drift_window", drift_window),
             ("flag", wrong_indicator),
             ("typo", unknown_indicator),
             ("window", missing_window),

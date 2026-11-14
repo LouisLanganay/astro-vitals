@@ -130,6 +130,7 @@ Details:
 - `absolute` on `exercise_min` with no `threshold` uses `Settings::exercise_prescription_min`.
   The mean is for each day, so the rule compares the daily mean with the daily prescription.
 - `drift`: the score uses the 7 days that end on the day. The default `min_days` is 4.
+- `drift`: `window_days` is optional. If you write it, it must be 7.
   A day with no score stops the sustain count. The fired value is the score of the day.
   The rule does not fire if the indicator has fewer than 7 pre-flight days.
 - `symptom_duration`: a day without a check stops the run. One fired rule for each kind.
