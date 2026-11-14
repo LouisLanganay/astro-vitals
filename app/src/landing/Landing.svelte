@@ -344,6 +344,45 @@
     }
   }
 
+  @media (min-aspect-ratio: 21/20) and (max-height: 430px) {
+    .top {
+      top: 14px;
+      left: max(20px, env(safe-area-inset-left, 0px));
+    }
+    .name span {
+      display: none;
+    }
+    .hero {
+      left: max(20px, env(safe-area-inset-left, 0px));
+      top: auto;
+      bottom: 14px;
+      translate: none;
+      gap: 8px;
+      max-width: 46%;
+    }
+    .eyebrow {
+      display: none;
+    }
+    h1 {
+      font-size: clamp(26px, 5.4vw, 36px);
+    }
+    .sub {
+      font-size: 14px;
+    }
+    .btn {
+      min-height: 44px;
+      margin-top: 4px;
+      padding: 8px 22px;
+      font-size: 15px;
+    }
+    .note {
+      font-size: 11.5px;
+    }
+    .landing:not([data-phase='idle']) .hero {
+      translate: 0 10px;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .pin {
       display: none;

@@ -13,4 +13,13 @@
   line-height: 1.3;
   pointer-events: none;
   backdrop-filter: blur(8px);
+  transition: opacity 400ms ease-in;
+}
+.web-demo-note.out {
+  opacity: 0;
+}
+@media (max-width: 999px) {
+  .web-demo-note {
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
 }
