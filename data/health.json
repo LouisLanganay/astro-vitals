@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": "0.2.1",
+    "version": "0.2.2",
     "note": "Demo values for a hackathon tool, not medical advice. Each value cites its source; 'assumption' marks a value we chose where no primary source gives one.",
     "status_rule": "A reading is green inside 'green', orange inside 'orange' (outside green), red otherwise. Ranges are inclusive [min, max]; null = no bound.",
     "flight_rule": "temp: before applying thresholds, subtract the expected in-flight rise for the current day (drift.<location>.temp_rise_c, linear from day 0 to reached_at_day). A +1 °C rise alone stays green on long missions.",
@@ -133,15 +133,15 @@
         10
       ],
       "orange": [
-        6,
+        5,
         12
       ],
       "source": "aasm_sleep",
-      "space_note": "ISS crews sleep about 6 h on average (barger_2014). Sleep debt adds up over days.",
+      "space_note": "ISS crews sleep about 6 h on average (barger_2014). Sleep debt adds up over days. Red starts under 5 h so that the usual ~6 h in flight reads orange, not red.",
       "trend_rule": "Orange if the 7-day average is under 6.5 h, even when last night was green.",
       "advice": {
         "orange": "Protect the next sleep slot: dim the light 1 hour before, eye mask, no screen.",
-        "red": "Under 6 h several nights in a row lowers attention: avoid critical tasks if possible and tell the commander."
+        "red": "Under 5 h: lowered attention, avoid critical tasks if possible and tell the commander."
       }
     },
     "mood": {
