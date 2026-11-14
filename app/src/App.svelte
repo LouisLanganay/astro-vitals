@@ -238,15 +238,11 @@
 
     <header class="phead" bind:this={headEl}>
       <div>
-        <p class="eyebrow">
-          {#if day == null}
-            Mission day unknown
-          {:else if day < 0}
-            Pre-flight day {day}, launch in {-day} days
-          {:else}
-            Mission day {day} of {MISSION_DAYS}, Mars transit
-          {/if}
-        </p>
+        {#if day == null}
+          <p class="eyebrow">Mission day unknown</p>
+        {:else if day < 0}
+          <p class="eyebrow">Pre-flight day {day}, launch in {-day} days</p>
+        {/if}
         {#key current.id}
           <h1 in:fly={{ y: prefersReducedMotion.current ? 0 : 6, duration: prefersReducedMotion.current ? 0 : 220 }}>
             {current.title}
@@ -292,8 +288,7 @@
     </main>
 
     <p class="foot" role="note">
-      <b>Prototype, not a medical device.</b> It compares you with your own pre-flight baseline,
-      explains each result and gives one action. It does not diagnose. Data stays on this device.
+      <b>Prototype, not a medical device.</b> Data stays on this device.
     </p>
   </div>
   {#if moreOpen}

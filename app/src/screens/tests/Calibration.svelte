@@ -32,7 +32,6 @@
 <section class="card" aria-labelledby="c-t" bind:clientWidth={cardW}>
   <header>
     <h2 id="c-t">Calibration</h2>
-    <span class="eyebrow">Once for each screen</span>
   </header>
   <p>
     {#if upright}
