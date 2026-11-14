@@ -71,6 +71,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "astro-vitals-web"
+version = "0.1.0"
+dependencies = [
+ "astro-vitals-core",
+ "chrono",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "atk"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
