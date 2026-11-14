@@ -46,7 +46,7 @@
   const all = $derived(catalog.value?.rules ?? []);
   const ordered = $derived([...all.filter((r) => firedById.has(r.id)), ...all.filter((r) => !firedById.has(r.id))]);
   const rules = $derived(filter === 'all' ? ordered : ordered.filter((r) => r.level === filter));
-  const drift = $derived(catalog.value?.drift ?? { self_care: 2, tell_cmo: 3 });
+  const drift = $derived(catalog.value?.drift ?? null);
   loadCatalog();
   const indicators = $derived(app.assessment?.indicators ?? []);
 
@@ -132,8 +132,10 @@
           {all.length || ''} {all.length === 1 ? 'rule' : 'rules'}, each with a source
         </h2>
         <p class="small muted sub">
-          A rule marked as a design selection needs a medical review. Drift levels: a score of
-          {drift.self_care} or more is self-care, {drift.tell_cmo} or more is tell the CMO.
+          A rule marked as a design selection needs a medical review.
+          {#if drift}
+            Drift levels: a score of {drift.self_care} or more is self-care, {drift.tell_cmo} or more is tell the CMO.
+          {/if}
           {fired.length} {fired.length === 1 ? 'rule fires' : 'rules fire'} today.
         </p>
       </div>
@@ -146,7 +148,7 @@
       </div>
     </header>
     {#if !catalog.value}
-      <p class="muted" role="status">{catalog.failed ? 'The rule catalog is not available.' : 'Loading...'}</p>
+      <p class="muted" role="status">{catalog.failed ? 'Rules unavailable: the rule catalog did not load.' : 'Loading...'}</p>
     {:else}
       {#key filter}
         <div class="rules">
