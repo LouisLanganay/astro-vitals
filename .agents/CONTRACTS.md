@@ -59,3 +59,23 @@ A change to a frozen file needs an agreement of all lanes.
 - Refresh: call `await refresh()` after each successful save, `set_settings` and `load_scenario`. It loads `app.day` and `app.assessment` again and increments `app.revision`. A screen that holds its own data reads `app.revision` in a `$effect` to load again.
 - Shared CSS classes in `app.css`: `card`, `row`, `grid`, `btn`, `btn primary`, `field` (with `.help` and `.error`), `banner info|warn|error`, `muted`. Level colors: `--level-ok`, `--level-self-care`, `--level-tell-cmo`, `--level-flight-surgeon`, `--level-none`.
 - The source URL of a rule shows as text (`FiredRuleCard`). The app has no plugin that opens a browser.
+
+## rules.toml format
+
+The file has one `[drift]` table (`self_care`, `tell_cmo`: the default drift thresholds) and one `[[rules]]` table for each rule.
+Fields: `id`, `indicator`, `kind`, `threshold`, `window_days`, `min_days`, `sustain_days`, `level`, `action`, `explanation`, `body_region`, `source`. An unknown field is an error. Each error names the rule `id`.
+
+| Kind | Indicator | Fires when |
+|---|---|---|
+| `absolute` | numeric | The mean of `window_days` is past `threshold` in the bad direction. `exercise_min` with no `threshold` uses the setting. |
+| `drift` | numeric | The 7-day drift score is at or above `threshold` on each of the last `sustain_days` days (default 1). With no `threshold`: the `[drift]` value of the level. |
+| `symptom_duration` | `any` or a symptom kind | The symptom is present on more than `threshold` consecutive days. |
+| `symptom_recurrence` | `any` or a symptom kind | `threshold` or more episodes in `window_days`. A day with no check ends an episode. |
+| `symptom_unresolved` | `any` or a symptom kind | The check of the day has a symptom with `treated = true` and `improved = false`. |
+| `red_flag` | a red flag kind | The check of the day has that red flag. Level `flight_surgeon` and a `body_region` are necessary. |
+| `vision_change` | `acuity_*`, `amsler_*` | The last test has a finding that the reference test does not have. |
+| `vision_persistent` | `acuity_*`, `amsler_*` | Each of the last 2 tests has the finding. |
+
+- Limits: `window_days`, `min_days`, `sustain_days` from 1 to 365. `min_days` is not more than `window_days`. A `drift` window is always 7 days. `sustain_days` is only for `drift`.
+- Vision reference: the latest pre-flight test. Only later tests count. An acuity finding is `threshold` logMAR or more above the reference. With no pre-flight test, the reference is "no distortion" and the acuity rules are `not_enough_data`.
+- Packet above 16 384 bytes: `packet::build` removes, in this order, `explanation`, `action` and `source` of the fired rules (lowest level first), then the oldest values and symptoms, then the baselines.

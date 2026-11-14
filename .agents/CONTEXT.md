@@ -54,10 +54,10 @@ All data stays on the device. Specification: [SPEC.md](./SPEC.md). Evidence: [RE
 - Shell: the command logic is in private `AppState` methods that take `today`. Tests call these methods, not the `#[tauri::command]` functions.
 - Shell tests need `app/dist` (run `pnpm --dir app build` first). They use `store::tests::temp_dir(name)`.
 - Store: `data.json` in the app data directory. A corrupt file becomes `data.corrupt-<n>.json`. `write_atomic` uses `<file name>.<pid>.tmp`. `Store::open` writes no file until the first save.
-- Rule kinds in `rules.toml`: `absolute`, `drift`, `vision`, `symptom_duration`, `symptom_recurrence`, `symptom_not_improved`, `red_flag`. Unknown fields are an error.
+- Rule kinds in `rules.toml`: `absolute`, `drift`, `symptom_duration`, `symptom_recurrence`, `symptom_unresolved`, `red_flag`, `vision_change`, `vision_persistent`. Unknown fields are an error. Format: [CONTRACTS.md](./CONTRACTS.md), section "rules.toml format".
 - A `drift` rule with no `threshold` takes the `[drift]` value of its level. The `exercise_min` rule with no `threshold` takes the setting.
 - `rules::parse` rejects a `red_flag` rule that has no `body_region` or a level other than `flight_surgeon`.
-- A `vision` rule uses the last `min_days` tests, not a window of days.
+- Vision rules compare with the latest pre-flight test. `vision_change` uses the last test, `vision_persistent` the last 2 tests.
 - A scenario has data for mission days -14 to 119. Mission day 120 (today) has no data.
 - Core tests: `crates/core/tests/scenarios.rs` (SPEC Verification, rule content) and `edge_cases.rs` (SPEC Edge cases).
 - Manual demo: [DEMO.md](./DEMO.md).
