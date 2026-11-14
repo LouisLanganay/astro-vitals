@@ -2,19 +2,25 @@
   import { getSettings, loadScenario, setSettings } from '../../lib/api';
   import { errorText, fieldMessage, toAppError } from '../../lib/errors';
   import { missionDayLabel } from '../../lib/format';
-  import { SCENARIO_LABEL } from '../../lib/labels';
+  import { INDICATOR_INFO, RED_FLAG_LABEL, SCENARIO_LABEL, STATE_LABEL, SYMPTOM_LABEL } from '../../lib/labels';
   import LevelBadge from '../../lib/LevelBadge.svelte';
+  import { formatValue, isUrl, ruleFact, ruleTitle, sourceLabel } from '../../lib/rules';
   import { app, refresh } from '../../lib/state.svelte';
   import {
+    BASELINE_DAYS,
+    LEVELS,
     SCENARIO_IDS,
     type AppError,
     type FieldError,
+    type FiredRule,
+    type Level,
     type ScenarioId,
     type ScenarioInfo,
     type Settings,
   } from '../../lib/types';
 
-  import { minutesError } from './num';
+  import { minutesError, num } from './num';
+  import { DRIFT_LEVELS } from './thresholds';
 
   const REQUIRED = 'Enter a value.';
 
@@ -30,6 +36,15 @@
   let scenarioBusy = $state(false);
   let scenarioError = $state<AppError | null>(null);
   let info = $state.raw<ScenarioInfo | null>(null);
+
+  let filter = $state<'all' | Level>('all');
+  const FILTERS: ['all' | Level, string][] = [
+    ['all', 'All'],
+    ...LEVELS.filter((l) => l !== 'ok').map((l): [Level, string] => [l, STATE_LABEL[l]]),
+  ];
+  const fired = $derived(app.assessment?.fired ?? []);
+  const rules = $derived(filter === 'all' ? fired : fired.filter((r) => r.level === filter));
+  const indicators = $derived(app.assessment?.indicators ?? []);
 
   async function load() {
     loading = true;
@@ -95,6 +110,13 @@
       scenarioBusy = false;
     }
   }
+
+  function subjectLabel(rule: FiredRule) {
+    const s = rule.subject;
+    if (s.type === 'indicator') return INDICATOR_INFO[s.value].label;
+    if (s.type === 'symptom') return `Symptom: ${SYMPTOM_LABEL[s.value].toLowerCase()}`;
+    return `Red flag: ${RED_FLAG_LABEL[s.value].toLowerCase()}`;
+  }
 </script>
 
 {#snippet fieldError(field: string)}
@@ -104,135 +126,332 @@
   {/if}
 {/snippet}
 
-<section>
-  <h1>Settings</h1>
+<div class="stack">
+  <section class="card rise" aria-labelledby="st-r">
+    <header>
+      <div>
+        <h2 id="st-r">
+          {fired.length} {fired.length === 1 ? 'rule' : 'rules'} fired today, each with a source
+        </h2>
+        <p class="small muted sub">
+          A rule marked as a design selection needs a medical review. Drift levels: a score of
+          {DRIFT_LEVELS.self_care} or more is self-care, {DRIFT_LEVELS.tell_cmo} or more is tell the CMO.
+        </p>
+      </div>
+      <div class="seg" role="group" aria-label="Filter by level">
+        {#each FILTERS as [value, text] (value)}
+          <button type="button" aria-pressed={filter === value} onclick={() => (filter = value)}>
+            {text}
+          </button>
+        {/each}
+      </div>
+    </header>
+    {#if !app.assessment}
+      <p class="muted" role="status">{app.loading ? 'Loading...' : 'The assessment is not available.'}</p>
+    {:else}
+      {#key filter}
+        <div class="rules">
+          {#each rules as rule, k (rule.rule_id)}
+            {@const fact = ruleFact(rule)}
+            <article class="rrow rise" style:--i={Math.min(k, 10)}>
+              <div><LevelBadge state={rule.level} /></div>
+              <div>
+                <h3>{ruleTitle(rule)}</h3>
+                <p class="meta">
+                  <code>{rule.rule_id}</code>
+                  {subjectLabel(rule)}{fact ? `, ${fact}` : ''}
+                </p>
+                <p class="exp">{rule.explanation}</p>
+              </div>
+              <p class="act">{rule.action}</p>
+              <p class="src">
+                {#if isUrl(rule.source)}
+                  <a href={rule.source} target="_blank" rel="noopener noreferrer">
+                    {sourceLabel(rule.source)}
+                  </a>
+                {:else}
+                  {rule.source}
+                {/if}
+              </p>
+            </article>
+          {:else}
+            <p class="muted empty">
+              {fired.length ? 'No fired rule at this level.' : 'No rule fired today.'}
+            </p>
+          {/each}
+        </div>
+      {/key}
+    {/if}
+  </section>
 
-  {#if error}
-    <p class="banner error" role="alert">{errorText(error)}</p>
-  {/if}
+  <div class="grid g-7-5">
+    <section class="card rise" style:--i={1} aria-labelledby="st-b">
+      <header>
+        <h2 id="st-b">Personal baseline</h2>
+        <span class="eyebrow">{BASELINE_DAYS} pre-flight days</span>
+      </header>
+      {#if indicators.length}
+        <div class="tw">
+          <table>
+            <thead>
+              <tr>
+                <th>Indicator</th>
+                <th>Days</th>
+                <th>Median</th>
+                <th>MAD</th>
+                <th>Drift</th>
+                <th>Bad when</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each indicators as s, k (s.indicator)}
+                {@const i = INDICATOR_INFO[s.indicator]}
+                <tr class="rise" style:--i={Math.min(k, 14)}>
+                  <td>{i.label}</td>
+                  <td class="num">{s.baseline?.days ?? 0}</td>
+                  <td class="num">{s.baseline ? formatValue(s.indicator, s.baseline.median) : 'none'}</td>
+                  <td class="num">{s.baseline ? num(s.baseline.mad) : 'none'}</td>
+                  <td class="num">{s.drift_score == null ? 'none' : num(+s.drift_score.toFixed(1))}</td>
+                  <td>{i.bad}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        <p class="small muted">
+          The baseline is the median and the MAD of the pre-flight days. The drift score needs
+          7 pre-flight days or more.
+        </p>
+      {:else}
+        <p class="muted">No baseline yet.</p>
+      {/if}
+    </section>
 
-  {#if settings}
-    <form class="card" novalidate onsubmit={save}>
-      <h2>Mission</h2>
-      <label class="field">
-        <span>Launch date</span>
-        <input
-          type="date"
-          bind:value={launchDate}
-          aria-invalid={fieldMessage(error, 'launch_date') ? 'true' : undefined}
-        />
-        <span class="help">
-          The launch date is mission day 0. The days before it are pre-flight days. They give your
-          baseline.
-        </span>
-        {@render fieldError('launch_date')}
-      </label>
-      <label class="field">
-        <span>Exercise prescription (minutes each day)</span>
-        <input
-          type="number"
-          min="0"
-          step="1"
-          inputmode="numeric"
-          bind:value={prescription}
-          aria-invalid={fieldMessage(error, 'exercise_prescription_min') ? 'true' : undefined}
-        />
-        <span class="help">
-          The sum of resistive and aerobic exercise that you must do each day. The exercise rule
-          compares your 7-day total with this value.
-        </span>
-        {@render fieldError('exercise_prescription_min')}
-      </label>
-      <div class="row">
-        <button type="submit" class="btn primary" disabled={saving || loading}>
-          {saving ? 'Saving...' : 'Save the settings'}
-        </button>
-        {#if saved}
-          <span role="status">The settings are saved.</span>
+    <div class="stack">
+      {#if error}
+        <p class="banner error" role="alert">{errorText(error)}</p>
+      {/if}
+
+      {#if settings}
+        <form class="card rise" style:--i={2} novalidate onsubmit={save} aria-labelledby="st-s">
+          <header><h2 id="st-s">Mission</h2></header>
+          <label class="field">
+            <span>Launch date</span>
+            <input
+              type="date"
+              bind:value={launchDate}
+              aria-invalid={fieldMessage(error, 'launch_date') ? 'true' : undefined}
+            />
+            <span class="help">
+              The launch date is mission day 0. The days before it are pre-flight days. They give
+              your baseline.
+            </span>
+            {@render fieldError('launch_date')}
+          </label>
+          <label class="field">
+            <span>Exercise prescription (minutes each day)</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              inputmode="numeric"
+              bind:value={prescription}
+              aria-invalid={fieldMessage(error, 'exercise_prescription_min') ? 'true' : undefined}
+            />
+            <span class="help">
+              The sum of resistive and aerobic exercise that you must do each day. The exercise rule
+              compares your 7-day total with this value.
+            </span>
+            {@render fieldError('exercise_prescription_min')}
+          </label>
+          <div class="row">
+            <button type="submit" class="btn primary" class:ok={saved} disabled={saving || loading}>
+              {saving ? 'Saving...' : saved ? 'Saved' : 'Save the settings'}
+            </button>
+            {#if saved}
+              <span class="small muted pop" role="status">The settings are saved.</span>
+            {/if}
+          </div>
+        </form>
+      {:else if loading}
+        <p class="muted" role="status">Loading...</p>
+      {:else}
+        <div>
+          <button class="btn" onclick={load}>Try again</button>
+        </div>
+      {/if}
+
+      <section class="card rise" style:--i={3} aria-labelledby="st-sc">
+        <header><h2 id="st-sc">Load a scenario</h2></header>
+        <p class="small muted">
+          A scenario is a prepared mission for a demonstration. It replaces all stored data and sets
+          the mission day.
+        </p>
+        <div class="seg" role="group" aria-label="Scenario">
+          {#each SCENARIO_IDS as id (id)}
+            <button
+              type="button"
+              aria-pressed={pending === id}
+              disabled={scenarioBusy}
+              onclick={() => (pending = id)}
+            >
+              {SCENARIO_LABEL[id]}
+            </button>
+          {/each}
+        </div>
+        {#if pending}
+          {@const id = pending}
+          <div class="banner warn pop" role="alert">
+            <span>
+              The scenario "{SCENARIO_LABEL[id]}" replaces all stored data. You cannot get the data
+              back. Continue?
+            </span>
+            <span class="btns">
+              <button class="btn primary sm" onclick={() => replaceData(id)}>Replace the data</button>
+              <button class="btn sm" onclick={() => (pending = null)}>Cancel</button>
+            </span>
+          </div>
         {/if}
-      </div>
-    </form>
-  {:else if loading}
-    <p class="muted" role="status">Loading...</p>
-  {:else}
-    <div>
-      <button class="btn" onclick={load}>Try again</button>
-    </div>
-  {/if}
-
-  <div class="card scenario">
-    <h2>Load a scenario</h2>
-    <p class="muted">
-      A scenario is a prepared mission for a demonstration. It replaces all stored data and sets the
-      mission day.
-    </p>
-    <div class="row">
-      {#each SCENARIO_IDS as id (id)}
-        <button class="btn" disabled={scenarioBusy} onclick={() => (pending = id)}>
-          {SCENARIO_LABEL[id]}
-        </button>
-      {/each}
-    </div>
-    {#if pending}
-      {@const id = pending}
-      <div class="banner warn" role="alert">
-        <span>
-          The scenario "{SCENARIO_LABEL[id]}" replaces all stored data. You cannot get the data
-          back. Continue?
-        </span>
-        <span class="row">
-          <button class="btn primary" onclick={() => replaceData(id)}>Replace the data</button>
-          <button class="btn" onclick={() => (pending = null)}>Cancel</button>
-        </span>
-      </div>
-    {/if}
-    {#if scenarioBusy}
-      <p class="muted" role="status">Loading the scenario...</p>
-    {/if}
-    {#if scenarioError}
-      <p class="banner error" role="alert">{errorText(scenarioError)}</p>
-    {/if}
-    {#if info}
-      <div class="info" role="status">
-        <h3>Scenario loaded: {SCENARIO_LABEL[info.id]}</h3>
-        <p>{info.description}</p>
-        <p>Today is: {missionDayLabel(info.mission_day)}.</p>
-        {#if info.expected.length > 0}
-          <p>First mission day of each expected level:</p>
-          <ul>
-            {#each info.expected as expected (expected.level)}
-              <li class="row">
-                <LevelBadge state={expected.level} />
-                <span>{missionDayLabel(expected.first_mission_day)}</span>
-              </li>
-            {/each}
-          </ul>
+        {#if scenarioBusy}
+          <p class="muted" role="status">Loading the scenario...</p>
         {/if}
-      </div>
-    {/if}
+        {#if scenarioError}
+          <p class="banner error" role="alert">{errorText(scenarioError)}</p>
+        {/if}
+        {#if info}
+          <div class="info rise" role="status">
+            <h3>Scenario loaded: {SCENARIO_LABEL[info.id]}</h3>
+            <p class="small muted">{info.description}</p>
+            <p class="small">Today is: {missionDayLabel(info.mission_day)}.</p>
+            {#if info.expected.length > 0}
+              <p class="small muted">First mission day of each expected level:</p>
+              <ul>
+                {#each info.expected as expected, k (expected.level)}
+                  <li class="kv rise" style:--i={k}>
+                    <LevelBadge state={expected.level} />
+                    <span class="num small">{missionDayLabel(expected.first_mission_day)}</span>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+          </div>
+        {/if}
+      </section>
+    </div>
   </div>
-</section>
+</div>
 
 <style>
-  form,
-  .scenario,
-  .info {
+  .sub {
+    margin-top: 4px;
+  }
+  .rules {
+    display: flex;
+    flex-direction: column;
+  }
+  .rrow {
     display: grid;
-    gap: 0.9rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px 22px;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
   }
-  form .field {
-    justify-items: start;
+  .rrow:first-child {
+    border-top: 0;
+    padding-top: 4px;
+  }
+  @media (min-width: 1100px) {
+    .rrow {
+      grid-template-columns: 140px minmax(0, 1.25fr) minmax(0, 1fr) 150px;
+      align-items: start;
+    }
+  }
+  .rrow h3 {
+    font-size: 15.5px;
+    font-weight: 500;
+    letter-spacing: -0.012em;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .exp {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .act {
+    font-size: 14px;
+  }
+  .src {
+    font-size: 13px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .empty {
+    padding: 8px 0;
+  }
+  .tw {
+    overflow-x: auto;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13px;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 11px 14px 11px 0;
+    border-top: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+    border-top: 0;
+    white-space: nowrap;
+  }
+  td.num {
+    white-space: nowrap;
+  }
+  .field .help {
+    color: var(--faint);
+    font-size: 12.5px;
+  }
+  .error {
+    color: var(--red);
+    font-size: 12.5px;
+  }
+  .btn.ok {
+    background: var(--green);
+    color: #04140b;
+    animation: pop-in var(--t-slow) var(--ease-spring);
   }
   .info {
-    gap: 0.5rem;
-    padding-top: 0.9rem;
-    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
   }
-  ul {
-    display: grid;
-    gap: 0.4rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  .kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn.ok {
+      animation: none;
+    }
   }
 </style>

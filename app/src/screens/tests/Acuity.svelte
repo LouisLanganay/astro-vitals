@@ -5,6 +5,7 @@
     LOGMAR_STEP,
     VIEWING_DISTANCE_CM,
   } from '../../lib/types';
+  import Icon from '../../lib/Icon.svelte';
 
   let {
     eye,
@@ -43,6 +44,8 @@
   const PAD: Direction[] = ['up', 'left', 'right', 'down'];
 
   const randomDirection = () => DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
+
+  const TURN: Record<Direction, number> = { right: 0, down: 90, left: 180, up: 270 };
 
   let started = $state(false);
   let index = $state(0);
@@ -84,74 +87,107 @@
 
 <svelte:window onkeydown={key} />
 
-<div class="card acuity">
-  <h2>Near acuity, {eye} eye</h2>
+<section class="card" aria-labelledby="a-t">
+  <header>
+    <h2 id="a-t">Near acuity, {eye} eye</h2>
+    <span class="eyebrow">Cover your {eye === 'left' ? 'right' : 'left'} eye</span>
+  </header>
   <p>
-    Cover your {eye === 'left' ? 'right' : 'left'} eye. Keep your {eye} eye
-    {VIEWING_DISTANCE_CM} cm from the screen.
-  </p>
-  <p>
-    The screen shows the letter E. The open side of the E points up, down, left or right. Press the
-    arrow key for that direction, or use the buttons. If you cannot see the direction, select one
-    direction.
+    Keep your {eye} eye {VIEWING_DISTANCE_CM} cm from the screen. The open side of the E points up,
+    down, left or right. Press the arrow key for that direction, or use the buttons. If you cannot
+    see the direction, select one direction.
   </p>
   {#if started}
-    <div class="chart" style:width="{box}px" style:height="{box}px">
-      <svg
-        viewBox="0 0 5 5"
-        width={size}
-        height={size}
-        role="img"
-        aria-label="Letter E"
-        shape-rendering="crispEdges"
-      >
-        <path
-          d="M0 0h5v1H1v1h4v1H1v1h4v1H0z"
-          transform="rotate({DIRECTIONS.indexOf(direction) * 90} 2.5 2.5)"
-        />
-      </svg>
+    <div class="stage">
+      <div class="chart" style:width="{box}px" style:height="{box}px">
+        {#key `${index}-${trial}`}
+          <svg
+            class="e"
+            viewBox="0 0 5 5"
+            width={size}
+            height={size}
+            role="img"
+            aria-label="Letter E"
+            shape-rendering="crispEdges"
+          >
+            <path
+              d="M0 0h5v1H1v1h4v1H1v1h4v1H0z"
+              transform="rotate({DIRECTIONS.indexOf(direction) * 90} 2.5 2.5)"
+            />
+          </svg>
+        {/key}
+      </div>
     </div>
-    <p class="muted" role="status">
-      Size: logMAR {logmarAt(index).toFixed(1)}. Trial {trial + 1} of {ACUITY_TRIALS_PER_SIZE}.
+    <p class="small muted num" role="status">
+      Size logMAR {logmarAt(index).toFixed(1)} · trial {trial + 1} of {ACUITY_TRIALS_PER_SIZE}
     </p>
     <div class="pad">
       {#each PAD as d (d)}
-        <button class="btn {d}" onclick={() => answer(d)}>{d[0].toUpperCase() + d.slice(1)}</button>
+        <button class="btn {d}" aria-label={d[0].toUpperCase() + d.slice(1)} onclick={() => answer(d)}>
+          <span class="arrow" style:--turn="{TURN[d]}deg"><Icon name="chevron" size={18} /></span>
+        </button>
       {/each}
     </div>
   {:else}
-    <div class="row">
+    <div class="btns">
       <button class="btn primary" onclick={() => (started = true)}>
         Start with the {eye} eye
       </button>
     </div>
   {/if}
-</div>
+</section>
 
 <style>
-  .acuity {
-    display: grid;
-    gap: 0.75rem;
-    justify-items: start;
-  }
-  .chart {
+  .stage {
+    position: relative;
     display: grid;
     place-items: center;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    padding: 16px;
+    border-radius: 22px;
+    overflow: auto;
+    background: radial-gradient(120% 90% at 50% 0%, var(--well-2), var(--bg) 75%);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.6;
+    background-image: radial-gradient(var(--line-2) 1px, transparent 1.2px);
+    background-size: 20px 20px;
+  }
+  .chart {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+  .e {
+    animation: e-in var(--t-fast) var(--ease-out);
   }
   path {
-    fill: #000;
+    fill: var(--fg);
   }
   .pad {
     display: grid;
-    grid-template-columns: repeat(3, 5.5rem);
+    grid-template-columns: repeat(3, 58px);
+    grid-template-rows: repeat(3, 50px);
     grid-template-areas:
       '. up .'
       'left . right'
       '. down .';
-    gap: 0.4rem;
+    gap: 6px;
+    justify-content: center;
+  }
+  .pad .btn {
+    padding: 0;
+    min-height: 0;
+    border-radius: 14px;
+  }
+  .arrow {
+    display: grid;
+    place-items: center;
+    transform: rotate(var(--turn));
   }
   .up {
     grid-area: up;
@@ -164,5 +200,10 @@
   }
   .right {
     grid-area: right;
+  }
+  @keyframes e-in {
+    from {
+      opacity: 0;
+    }
   }
 </style>

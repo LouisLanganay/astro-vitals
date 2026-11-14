@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getSettings, saveVisionTest, setSettings } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
+  import Icon from '../../lib/Icon.svelte';
   import LevelBadge from '../../lib/LevelBadge.svelte';
   import { app, navigate, refresh } from '../../lib/state.svelte';
   import {
@@ -91,6 +92,33 @@
     }
   }
 
+  const steps = $derived.by(() => {
+    const flow = step === 'acuity' || step === 'amsler';
+    const eyeText = `${EYES[eyeIndex]} eye`;
+    return [
+      {
+        title: 'Calibrate the screen',
+        sub: calibration
+          ? `${calibration.px_per_mm.toFixed(2)} px for each mm.`
+          : 'With a bank card, once for each screen.',
+        done: calibration != null,
+        now: step === 'calibrate' || !calibration,
+      },
+      {
+        title: 'Near acuity, each eye',
+        sub: flow && step === 'acuity' ? `Now: ${eyeText}.` : 'A tumbling E, 5 trials for each size.',
+        done: flow ? eyeIndex === EYES.length - 1 && step === 'amsler' : shown != null,
+        now: flow && step === 'acuity',
+      },
+      {
+        title: 'Amsler grid, each eye',
+        sub: flow && step === 'amsler' ? `Now: ${eyeText}.` : 'Mark each area where the lines look wavy.',
+        done: flow ? false : shown != null,
+        now: flow && step === 'amsler',
+      },
+    ];
+  });
+
   async function save() {
     if (!app.day) return;
     step = 'saving';
@@ -108,16 +136,16 @@
   }
 </script>
 
-{#snippet eyeResult(eye: 'left' | 'right', r: EyeResult)}
+{#snippet eyeResult(eye: 'left' | 'right', r: EyeResult, i: number)}
   {@const acuityState = stateOf(`acuity_${eye}`)}
   {@const amslerState = stateOf(`amsler_${eye}`)}
-  <div class="eye">
+  <div class="eye rise" style:--i={i}>
     <h3>{eye === 'left' ? 'Left eye' : 'Right eye'}</h3>
-    <p class="row">
-      <span>Near acuity: logMAR {r.acuity_logmar.toFixed(1)}</span>
+    <div class="kv">
+      <span>Near acuity <span class="num">logMAR {r.acuity_logmar.toFixed(1)}</span></span>
       {#if acuityState}<LevelBadge state={acuityState} />{/if}
-    </p>
-    <p class="row">
+    </div>
+    <div class="kv">
       <span>
         Amsler grid:
         {r.amsler_distortion
@@ -125,124 +153,246 @@
           : 'no distortion'}
       </span>
       {#if amslerState}<LevelBadge state={amslerState} />{/if}
-    </p>
+    </div>
   </div>
 {/snippet}
 
-<section>
-  <h1>Vision test</h1>
+{#snippet stepList()}
+  <ol class="vsteps">
+    {#each steps as s, k (k)}
+      <li class="vstep" class:now={s.now}>
+        <span class="n" class:ok={s.done}>
+          {#if s.done}
+            <span class="tick pop"><Icon name="check" size={15} /></span>
+          {:else}
+            {k + 1}
+          {/if}
+        </span>
+        <span>
+          <b>{s.title}</b>
+          <span class="s">{s.sub}</span>
+        </span>
+        {#if s.done}
+          <span class="okd pop">Done</span>
+        {:else if s.now}
+          <span class="nowd">Now</span>
+        {:else}
+          <span></span>
+        {/if}
+      </li>
+    {/each}
+  </ol>
+{/snippet}
 
-  {#if loadError}
-    <p class="banner error" role="alert">
-      The settings are not available. {errorText(loadError)}
-    </p>
-  {:else if !settings || !app.day}
-    <p class="muted" role="status">
-      {!settings || app.loading ? 'Loading...' : 'The data of today is not available.'}
-    </p>
-  {:else if step === 'calibrate' || !calibration}
-    {#if !calibration}
-      <p class="banner warn" role="alert">
-        The vision test cannot start without a calibration. Do the calibration first.
-      </p>
-    {/if}
-    {#if error}
-      <p class="banner error" role="alert">The calibration was not saved. {errorText(error)}</p>
-    {/if}
-    <Calibration
-      pxPerMm={calibration?.px_per_mm ?? null}
-      {busy}
-      onsave={saveCalibration}
-      oncancel={calibration ? () => (step = 'intro') : null}
-    />
-  {:else if step === 'acuity' || step === 'amsler'}
-    <p class="row">
-      <span class="muted">Eye {eyeIndex + 1} of {EYES.length}</span>
-      <button class="btn" onclick={() => (step = 'intro')}>Stop the test</button>
-    </p>
-    {#if step === 'acuity'}
-      <Acuity eye={EYES[eyeIndex]} pxPerMm={calibration.px_per_mm} ondone={acuityDone} />
-    {:else}
-      <Amsler eye={EYES[eyeIndex]} pxPerMm={calibration.px_per_mm} ondone={amslerDone} />
-    {/if}
-  {:else if step === 'saving'}
-    <p class="muted" role="status">The test is complete. Saving the result...</p>
-  {:else if step === 'failed' && error}
-    <div class="banner error" role="alert">
-      <span>The result was not saved. {errorText(error)}</span>
-      <span class="row">
-        <button class="btn primary" onclick={save}>Save again</button>
-        <button class="btn" onclick={() => (step = 'intro')}>Discard the test</button>
-      </span>
-    </div>
-  {:else}
-    {#if shown}
-      <div class="card block">
-        <h2>{step === 'done' ? 'Your result' : 'Result of today'}</h2>
-        <div class="grid">
-          {@render eyeResult('right', shown.right)}
-          {@render eyeResult('left', shown.left)}
-        </div>
-        <p class="muted">
-          Near acuity: logMAR 0.0 is normal vision. A lower value is better. Amsler grid: a
-          distortion can be a sign of a change in the retina.
+{#if loadError}
+  <p class="banner error" role="alert">
+    The settings are not available. {errorText(loadError)}
+  </p>
+{:else if !settings || !app.day}
+  <p class="muted" role="status">
+    {!settings || app.loading ? 'Loading...' : 'The data of today is not available.'}
+  </p>
+{:else if step === 'calibrate' || !calibration}
+  <div class="grid g-7-5">
+    <div class="stack">
+      {#if !calibration}
+        <p class="banner warn" role="alert">
+          The vision test cannot start without a calibration: the size of the letters depends on
+          your screen.
         </p>
-        {#if step === 'done'}
-          <div class="row">
-            <button class="btn primary" onclick={() => navigate('home')}>
-              Go to the home screen
-            </button>
-          </div>
+      {/if}
+      {#if error}
+        <p class="banner error" role="alert">The calibration was not saved. {errorText(error)}</p>
+      {/if}
+      <Calibration
+        pxPerMm={calibration?.px_per_mm ?? null}
+        {busy}
+        onsave={saveCalibration}
+        oncancel={calibration ? () => (step = 'intro') : null}
+      />
+    </div>
+    <section class="card" aria-labelledby="v-s">
+      <header><h2 id="v-s">Steps</h2></header>
+      {@render stepList()}
+    </section>
+  </div>
+{:else if step === 'acuity' || step === 'amsler'}
+  <div class="grid g-7-5">
+    {#key `${step}-${eyeIndex}`}
+      <div class="flow">
+        {#if step === 'acuity'}
+          <Acuity eye={EYES[eyeIndex]} pxPerMm={calibration.px_per_mm} ondone={acuityDone} />
+        {:else}
+          <Amsler eye={EYES[eyeIndex]} pxPerMm={calibration.px_per_mm} ondone={amslerDone} />
         {/if}
       </div>
-    {/if}
-
-    <div class="card block">
-      <h2>How the test works</h2>
+    {/key}
+    <section class="card" aria-labelledby="v-s">
+      <header>
+        <h2 id="v-s">Eye {eyeIndex + 1} of {EYES.length}</h2>
+        <button class="btn ghost sm" onclick={() => (step = 'intro')}>Stop the test</button>
+      </header>
+      {@render stepList()}
+    </section>
+  </div>
+{:else if step === 'saving'}
+  <p class="muted" role="status">The test is complete. Saving the result...</p>
+{:else if step === 'failed' && error}
+  <div class="banner error" role="alert">
+    <span>The result was not saved. {errorText(error)}</span>
+    <span class="btns">
+      <button class="btn sm primary" onclick={save}>Save again</button>
+      <button class="btn sm" onclick={() => (step = 'intro')}>Discard the test</button>
+    </span>
+  </div>
+{:else}
+  <div class="grid g-7-5">
+    <section class="card" aria-labelledby="v-t">
+      <header>
+        <div class="ttl">
+          <span class="ic"><Icon name="eye" /></span>
+          <h2 id="v-t">Weekly vision test</h2>
+        </div>
+        <span class="eyebrow">{due ? 'Due now' : 'Not due today'}</span>
+      </header>
       <p>
-        Do this test one time each week. It finds changes in your near vision. Long spaceflight can
-        change the eyes.
+        One test each week, one eye at a time. Hold the screen at {VIEWING_DISTANCE_CM} cm. Long
+        spaceflight can change the eyes.
       </p>
-      <ol>
-        <li>Put your eyes {VIEWING_DISTANCE_CM} cm from the screen. Measure the distance.</li>
-        <li>Use the same light and the same glasses each week.</li>
-        <li>You test one eye at a time. Cover the other eye with your hand.</li>
-        <li>Near acuity: tell the direction of the letter E. The letter becomes smaller.</li>
-        <li>Amsler grid: look at the center dot and tell if the lines are straight.</li>
-      </ol>
+      {@render stepList()}
       {#if due}
         <p class="banner info">The weekly vision test is due.</p>
       {/if}
-      {#if shown}
-        <p class="muted">A new test replaces the result of today.</p>
-      {/if}
-      <p class="muted">
-        Calibration: {calibration.px_per_mm.toFixed(2)} px for each mm of the display.
-      </p>
-      <div class="row">
+      <div class="btns">
         <button class="btn primary" onclick={start}>
           {shown ? 'Start the test again' : 'Start the test'}
         </button>
         <button class="btn" onclick={() => (step = 'calibrate')}>Do the calibration again</button>
       </div>
+      {#if shown}
+        <p class="small muted">A new test replaces the result of today.</p>
+      {/if}
+    </section>
+
+    <div class="stack">
+      {#if shown}
+        <section class="card" aria-labelledby="v-r">
+          <header>
+            <h2 id="v-r">{step === 'done' ? 'Your result' : 'Result of today'}</h2>
+          </header>
+          {@render eyeResult('right', shown.right, 0)}
+          {@render eyeResult('left', shown.left, 1)}
+          <p class="small muted">
+            Near acuity: logMAR 0.0 is normal vision. A lower value is better. Amsler grid: a
+            distortion can be a sign of a change in the retina.
+          </p>
+          {#if step === 'done'}
+            <div class="btns">
+              <button class="btn primary" onclick={() => navigate('home')}>
+                Go to the home screen
+              </button>
+            </div>
+          {/if}
+        </section>
+      {/if}
+      <section class="card" aria-labelledby="v-h">
+        <header><h2 id="v-h">Before you start</h2></header>
+        <ol class="tips">
+          <li>Put your eyes {VIEWING_DISTANCE_CM} cm from the screen. Measure the distance.</li>
+          <li>Use the same light and the same glasses each week.</li>
+          <li>Cover the other eye with your hand.</li>
+          <li>Near acuity: tell the direction of the letter E. The letter becomes smaller.</li>
+          <li>Amsler grid: look at the center dot and tell if the lines are straight.</li>
+        </ol>
+      </section>
     </div>
-  {/if}
-</section>
+  </div>
+{/if}
 
 <style>
-  .block,
-  .eye {
+  .flow {
+    min-width: 0;
+    animation: flow-in var(--t-slow) var(--ease-out) backwards;
+  }
+  .vsteps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .vstep {
     display: grid;
-    gap: 0.75rem;
-    align-content: start;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--well);
+    box-shadow: inset 0 0 0 1px var(--line);
+    transition: box-shadow var(--t-mid) var(--ease-out);
+  }
+  .vstep.now {
+    box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ui) 55%, transparent);
+  }
+  .n {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    background: linear-gradient(180deg, var(--raise-a), var(--raise-b));
+    box-shadow: inset 0 1px 0 var(--hi), 0 0 0 1px var(--line);
+  }
+  .n.ok {
+    color: var(--green);
+  }
+  .tick {
+    display: grid;
+    place-items: center;
+  }
+  .vstep b {
+    display: block;
+    font-weight: 500;
+  }
+  .s {
+    display: block;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .okd {
+    font-size: 12.5px;
+    color: var(--green);
+  }
+  .nowd {
+    font-size: 12.5px;
+    color: var(--ui);
   }
   .eye {
-    gap: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
-  ol {
-    margin: 0;
-    padding-left: 1.25rem;
+  .kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px 12px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .tips {
+    list-style: decimal;
+    padding-left: 1.2rem;
     display: grid;
-    gap: 0.3rem;
+    gap: 6px;
+    color: var(--muted);
+  }
+  @keyframes flow-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
   }
 </style>

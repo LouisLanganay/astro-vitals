@@ -1,11 +1,12 @@
 <script lang="ts">
   import { exportPacket, pickExportPath } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
-  import FiredRuleCard from '../../lib/FiredRuleCard.svelte';
   import { missionDayLabel } from '../../lib/format';
   import { INDICATOR_INFO, RED_FLAG_LABEL, REGION_LABEL, SYMPTOM_LABEL } from '../../lib/labels';
   import LevelBadge from '../../lib/LevelBadge.svelte';
+  import { ruleFact, ruleTitle } from '../../lib/rules';
   import { app } from '../../lib/state.svelte';
+  import Ticker from '../../lib/Ticker.svelte';
   import {
     PACKET_MAX_BYTES,
     PACKET_WINDOW_DAYS,
@@ -13,6 +14,7 @@
     type PacketExport,
     type Symptom,
   } from '../../lib/types';
+  import { tokens } from './json';
   import { num } from './num';
 
   let preview = $state.raw<PacketExport | null>(null);
@@ -21,6 +23,7 @@
   let exporting = $state(false);
   let exportError = $state<AppError | null>(null);
   let message = $state<string | null>(null);
+  let done = $state(false);
 
   async function load() {
     loading = true;
@@ -44,15 +47,17 @@
     exporting = true;
     exportError = null;
     message = null;
+    done = false;
     try {
       const path = await pickExportPath(`astro-vitals-packet-${preview.packet.date}.json`);
       if (path === null) {
         message = 'The export was cancelled. No file was written.';
         return;
       }
-      const done = await exportPacket(path);
-      preview = done;
-      message = `The packet is in the file ${done.path ?? path}. Size: ${done.bytes} bytes.`;
+      const result = await exportPacket(path);
+      preview = result;
+      done = true;
+      message = `The packet is in the file ${result.path ?? path}. Size: ${result.bytes} bytes.`;
     } catch (e) {
       exportError = toAppError(e);
     } finally {
@@ -65,106 +70,191 @@
     if (symptom.improved === null) return 'treated, result not known';
     return symptom.improved ? 'treated, improved' : 'treated, not improved';
   }
+
+  const pretty = $derived.by(() => {
+    if (!preview) return [];
+    try {
+      return tokens(JSON.stringify(JSON.parse(preview.json), null, 1));
+    } catch {
+      return tokens(preview.json);
+    }
+  });
+  const ratio = $derived(preview ? Math.min(1, preview.bytes / PACKET_MAX_BYTES) : 0);
+  const over = $derived(preview ? preview.bytes > PACKET_MAX_BYTES : false);
 </script>
 
-<section>
-  <h1>Packet export</h1>
-  <p class="muted">
-    The packet is a summary for the flight surgeon on Earth. It is one JSON file. No data leaves the
-    device until you export the file and send it.
-  </p>
-
+<div class="stack">
   {#if error}
     <p class="banner error" role="alert">{errorText(error)}</p>
   {/if}
 
   {#if preview}
     {@const packet = preview.packet}
-    <div class="card block">
-      <h2>{missionDayLabel(packet.mission_day)}, {packet.date}</h2>
-      <div class="row">
-        <span>Day level:</span>
-        <LevelBadge state={packet.level} />
-      </div>
-      <p>File size: {preview.bytes} bytes. The limit is {PACKET_MAX_BYTES} bytes.</p>
-      {#if preview.bytes > PACKET_MAX_BYTES}
-        <p class="banner warn" role="alert">The packet is larger than the limit.</p>
-      {/if}
-      <div class="row">
-        <button class="btn primary" disabled={exporting || loading} onclick={exportFile}>
-          {exporting ? 'Exporting...' : 'Export the packet'}
-        </button>
-        <span class="muted">The application asks for the file path.</span>
-      </div>
-      {#if message}
-        <p class="banner info" role="status">{message}</p>
-      {/if}
-      {#if exportError}
-        <p class="banner error" role="alert">The export failed. {errorText(exportError)}</p>
-      {/if}
-    </div>
+    <div class="grid g-5-7">
+      <section class="card rise" aria-labelledby="x-s">
+        <header>
+          <div>
+            <h2 id="x-s">Ready to export</h2>
+            <p class="small muted sub">{missionDayLabel(packet.mission_day)}, {packet.date}</p>
+          </div>
+          <LevelBadge state={packet.level} />
+        </header>
 
-    <h2>Packet content</h2>
-
-    <h3>Rules that fired ({packet.fired.length})</h3>
-    {#each packet.fired as rule}
-      <FiredRuleCard {rule} />
-    {:else}
-      <p class="muted">No rule fired.</p>
-    {/each}
-
-    <div class="card block">
-      <h3>Flagged indicators, values of the last {PACKET_WINDOW_DAYS} days</h3>
-      {#each packet.flagged as flagged (flagged.indicator)}
-        {@const info = INDICATOR_INFO[flagged.indicator]}
-        <p>
-          <strong>{info.label} ({info.unit}):</strong>
-          <span class="values">
-            {flagged.values.map((v) => (v === null ? '-' : num(v))).join(', ')}
+        <div class="cap">
+          <div class="big">
+            <Ticker value={preview.bytes / 1024} decimals={1} /><small>KB of {PACKET_MAX_BYTES / 1024} KB</small>
+          </div>
+          <div
+            class="capbar"
+            class:over
+            role="meter"
+            aria-label="Packet size"
+            aria-valuemin={0}
+            aria-valuemax={PACKET_MAX_BYTES}
+            aria-valuenow={preview.bytes}
+          >
+            <i style:transform="scaleX({ratio})"></i>
+          </div>
+          <span class="small muted">
+            {preview.bytes} bytes. {over
+              ? `Over the limit of ${PACKET_MAX_BYTES} bytes.`
+              : `Under the limit of ${PACKET_MAX_BYTES} bytes.`}
           </span>
+          {#if over}
+            <p class="banner warn" role="alert">The packet is larger than the limit.</p>
+          {/if}
+        </div>
+
+        <div class="tiles">
+          <div class="tile rise" style:--i={1}>
+            <b><Ticker value={packet.fired.length} /></b><span>Fired rules</span>
+          </div>
+          <div class="tile rise" style:--i={2}>
+            <b><Ticker value={packet.flagged.length} /></b>
+            <span>Flagged indicators, with {PACKET_WINDOW_DAYS} days of values</span>
+          </div>
+          <div class="tile rise" style:--i={3}>
+            <b><Ticker value={packet.symptoms.length} /></b>
+            <span>Symptoms, last {PACKET_WINDOW_DAYS} days</span>
+          </div>
+          <div class="tile rise" style:--i={4}>
+            <b><Ticker value={packet.baselines.length} /></b><span>Baseline values</span>
+          </div>
+        </div>
+
+        <button
+          class="btn primary big wide"
+          class:ok={done}
+          disabled={exporting || loading}
+          onclick={exportFile}
+        >
+          {#if done && !exporting}
+            <svg class="tickmark" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12.5l4.5 4.5L19 7.5" pathLength="1" />
+            </svg>
+            Exported. Export again
+          {:else}
+            {exporting ? 'Exporting...' : 'Export the packet'}
+          {/if}
+        </button>
+        {#if message}
+          <p class="status rise" role="status">{message}</p>
+        {/if}
+        {#if exportError}
+          <p class="banner error" role="alert">The export failed. {errorText(exportError)}</p>
+        {/if}
+        <p class="small muted">
+          The packet is a summary for the flight surgeon on Earth. It is one JSON file. The
+          application asks for the file path.
         </p>
-      {:else}
-        <p class="muted">No indicator is flagged.</p>
-      {/each}
-      <p class="muted">The oldest day is first. "-" shows a day with no data.</p>
+      </section>
+
+      <section class="card rise" style:--i={1} aria-labelledby="x-c">
+        <header>
+          <h2 id="x-c">Packet content</h2>
+          <span class="eyebrow">Nothing leaves this device until you export it</span>
+        </header>
+        {#key preview.json}
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <pre class="json" tabindex="0" aria-label="Exact file content, JSON">{#each pretty as t, i (i)}{#if t.c}<span
+                  class={t.c}>{t.t}</span
+                >{:else}{t.t}{/if}{/each}</pre>
+        {/key}
+      </section>
     </div>
 
-    <div class="card block">
-      <h3>Symptoms of the last {PACKET_WINDOW_DAYS} days</h3>
-      {#each packet.symptoms as item}
-        <p>
-          {item.date}: {SYMPTOM_LABEL[item.symptom.kind]}, severity {item.symptom.severity},
-          {REGION_LABEL[item.symptom.region]}, {treatment(item.symptom)}
-        </p>
-      {:else}
-        <p class="muted">No symptom.</p>
-      {/each}
-      <h3>Red flags</h3>
-      {#each packet.red_flags as flag}
-        <p>{flag.date}: {RED_FLAG_LABEL[flag.kind]}</p>
-      {:else}
-        <p class="muted">No red flag.</p>
-      {/each}
-    </div>
-
-    <div class="card block">
-      <h3>Baseline values</h3>
-      {#each packet.baselines as item (item.indicator)}
-        {@const info = INDICATOR_INFO[item.indicator]}
-        <p>
-          <strong>{info.label} ({info.unit}):</strong>
-          median {num(item.baseline.median)}, MAD {num(item.baseline.mad)},
-          {item.baseline.days} days
-        </p>
-      {:else}
-        <p class="muted">No baseline is available.</p>
-      {/each}
-    </div>
-
-    <details class="card">
-      <summary>Exact file content (JSON)</summary>
-      <pre>{preview.json}</pre>
-    </details>
+    <section class="card rise" style:--i={2} aria-labelledby="x-p">
+      <header>
+        <h2 id="x-p">The same packet in plain words</h2>
+        <span class="eyebrow">The oldest day is first. "-" shows a day with no data.</span>
+      </header>
+      <div class="plain">
+        <div>
+          <span class="lbl">Rules that fired ({packet.fired.length})</span>
+          {#each packet.fired as rule (rule.rule_id)}
+            {@const fact = ruleFact(rule)}
+            <div class="kv">
+              <span>{ruleTitle(rule)}{#if fact}<span class="small muted">, {fact}</span>{/if}</span>
+              <LevelBadge state={rule.level} />
+            </div>
+          {:else}
+            <p class="muted">No rule fired.</p>
+          {/each}
+        </div>
+        <div>
+          <span class="lbl">Flagged indicators, values of the last {PACKET_WINDOW_DAYS} days</span>
+          {#each packet.flagged as flagged (flagged.indicator)}
+            {@const info = INDICATOR_INFO[flagged.indicator]}
+            <div class="kv col">
+              <span>{info.label} ({info.unit})</span>
+              <span class="num small muted">
+                {flagged.values.map((v) => (v === null ? '-' : num(v))).join(', ')}
+              </span>
+            </div>
+          {:else}
+            <p class="muted">No indicator is flagged.</p>
+          {/each}
+        </div>
+        <div>
+          <span class="lbl">Symptoms and red flags, last {PACKET_WINDOW_DAYS} days</span>
+          {#each packet.symptoms as item, i (i)}
+            <div class="kv">
+              <span>
+                {SYMPTOM_LABEL[item.symptom.kind]}
+                <span class="small muted">
+                  severity {item.symptom.severity}, {REGION_LABEL[item.symptom.region]}, {treatment(item.symptom)}
+                </span>
+              </span>
+              <span class="num small muted">{item.date}</span>
+            </div>
+          {:else}
+            <p class="muted">No symptom.</p>
+          {/each}
+          {#each packet.red_flags as flag, i (i)}
+            <div class="kv">
+              <span>Red flag: {RED_FLAG_LABEL[flag.kind]}</span>
+              <span class="num small muted">{flag.date}</span>
+            </div>
+          {:else}
+            <p class="muted">No red flag.</p>
+          {/each}
+        </div>
+        <div>
+          <span class="lbl">Baseline values</span>
+          {#each packet.baselines as item (item.indicator)}
+            {@const info = INDICATOR_INFO[item.indicator]}
+            <div class="kv">
+              <span>{info.label} <span class="small muted">({info.unit})</span></span>
+              <span class="num small muted">
+                median {num(item.baseline.median)}, MAD {num(item.baseline.mad)}, {item.baseline.days} days
+              </span>
+            </div>
+          {:else}
+            <p class="muted">No baseline is available.</p>
+          {/each}
+        </div>
+      </div>
+    </section>
   {:else if loading}
     <p class="muted" role="status">Loading...</p>
   {:else}
@@ -172,27 +262,153 @@
       <button class="btn" onclick={load}>Try again</button>
     </div>
   {/if}
-</section>
+</div>
 
 <style>
-  .block {
-    display: grid;
-    gap: 0.6rem;
+  .sub {
+    margin-top: 4px;
   }
-  .values {
-    font-variant-numeric: tabular-nums;
+  .cap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .capbar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--well-2);
+    overflow: hidden;
+  }
+  .capbar i {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--ui-2), var(--ui));
+    transform-origin: left center;
+    transition: transform var(--t-slow) var(--ease-out);
+    animation: fill 600ms var(--ease-out) 120ms backwards;
+  }
+  .capbar.over i {
+    background: var(--red);
+  }
+  @keyframes fill {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .tile {
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--well);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .tile b {
+    display: block;
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 1.1;
+  }
+  .tile span {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .btn.ok {
+    background: var(--green);
+    color: #04140b;
+  }
+  .tickmark {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .tickmark path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: draw-tick 260ms var(--ease-out) forwards;
+  }
+  @keyframes draw-tick {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .status {
+    font-size: 13px;
     overflow-wrap: anywhere;
   }
-  summary {
-    cursor: pointer;
-    font-weight: 600;
-  }
-  pre {
-    margin: 0.75rem 0 0;
-    max-height: 24rem;
-    overflow: auto;
-    font-size: 0.8rem;
+  .json {
+    margin: 0;
+    font-family: var(--font-data);
+    font-size: 12px;
+    line-height: 1.6;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+    max-height: 640px;
+    overflow: auto;
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1px var(--line);
+    color: var(--muted);
+    animation: fade-in 320ms var(--ease-out) 80ms backwards;
+  }
+  .json :global(.k) {
+    color: var(--muted);
+  }
+  .json :global(.s) {
+    color: var(--fg);
+  }
+  .json :global(.n) {
+    color: var(--ui);
+  }
+  .json :global(.b) {
+    color: var(--orange);
+  }
+  .plain {
+    display: grid;
+    gap: 20px 32px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 900px) {
+    .plain {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .kv {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    align-items: center;
+  }
+  .kv.col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kv .num {
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 560px) {
+    .json {
+      max-height: 420px;
+      padding: 12px 14px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .capbar i,
+    .json,
+    .tickmark path {
+      animation: none;
+      stroke-dashoffset: 0;
+    }
   }
 </style>

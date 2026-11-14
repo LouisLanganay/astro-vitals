@@ -46,95 +46,124 @@
   }
 </script>
 
-<div class="card amsler">
-  <h2>Amsler grid, {eye} eye</h2>
+<section class="card" aria-labelledby="m-t">
+  <header>
+    <h2 id="m-t">Amsler grid, {eye} eye</h2>
+    <span class="eyebrow">Cover your {eye === 'left' ? 'right' : 'left'} eye</span>
+  </header>
   <p>
-    Cover your {eye === 'left' ? 'right' : 'left'} eye. Keep your {eye} eye
-    {VIEWING_DISTANCE_CM} cm from the screen. Look only at the dot in the center of the grid.
+    Keep your {eye} eye {VIEWING_DISTANCE_CM} cm from the screen. Look only at the dot in the center
+    of the grid.
   </p>
   {#if distortion}
-    <p>
+    <p class="muted">
       Select each cell where the lines are wavy, broken or absent. Use the mouse, or use the arrow
       keys and the Space key. Then continue.
     </p>
   {:else}
-    <p>Are lines of the grid wavy, broken or absent in an area?</p>
+    <p class="muted">Are lines of the grid wavy, broken or absent in an area?</p>
   {/if}
-  <div class="frame">
-    <div
-      class="cells"
-      role="group"
-      aria-label="Amsler grid"
-      style:grid-template-columns="repeat({N}, {CELL_MM * pxPerMm}px)"
-      style:grid-auto-rows="{CELL_MM * pxPerMm}px"
-    >
-      {#each marked as on, i (i)}
-        <button
-          class="cell"
-          class:on
-          disabled={!distortion}
-          tabindex={i === cursor ? 0 : -1}
-          aria-pressed={on}
-          aria-label="Row {Math.floor(i / N) + 1}, column {(i % N) + 1}"
-          onclick={() => {
-            cursor = i;
-            marked[i] = !on;
-          }}
-          onkeydown={(e) => move(e, i)}
-        ></button>
-      {/each}
+  <div class="area">
+    <div class="frame">
+      <div
+        class="cells"
+        role="group"
+        aria-label="Amsler grid"
+        style:grid-template-columns="repeat({N}, {CELL_MM * pxPerMm}px)"
+        style:grid-auto-rows="{CELL_MM * pxPerMm}px"
+      >
+        {#each marked as on, i (i)}
+          <button
+            class="cell"
+            class:on
+            disabled={!distortion}
+            tabindex={i === cursor ? 0 : -1}
+            aria-pressed={on}
+            aria-label="Row {Math.floor(i / N) + 1}, column {(i % N) + 1}"
+            onclick={() => {
+              cursor = i;
+              marked[i] = !on;
+            }}
+            onkeydown={(e) => move(e, i)}
+          ></button>
+        {/each}
+      </div>
+      <span class="dot"></span>
     </div>
-    <span class="dot"></span>
   </div>
   {#if distortion}
-    <p class="muted" role="status">Marked cells: {count}</p>
-    <div class="row">
+    <p class="small muted num" role="status">Marked cells: {count}</p>
+    <div class="btns">
       <button class="btn primary" onclick={finish}>Continue</button>
       <button class="btn" onclick={() => ondone(false, [])}>No distortion</button>
     </div>
   {:else}
-    <div class="row">
+    <div class="btns">
       <button class="btn" onclick={() => ondone(false, [])}>No, all lines are straight</button>
       <button class="btn" onclick={() => (distortion = true)}>Yes, I see a distortion</button>
     </div>
   {/if}
-</div>
+</section>
 
 <style>
-  .amsler {
-    display: grid;
-    gap: 0.75rem;
-    justify-items: start;
+  .area {
+    overflow: auto;
+    max-width: 100%;
   }
   .frame {
     position: relative;
-    padding: 0.75rem;
-    background: #fff;
-    border-radius: var(--radius);
+    width: max-content;
+    padding: 14px;
+    border-radius: 18px;
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1px var(--line);
   }
   .cells {
     display: grid;
-    border-top: 1px solid #000;
-    border-left: 1px solid #000;
+    border-top: 1px solid var(--fg);
+    border-left: 1px solid var(--fg);
   }
   .cell {
+    position: relative;
     padding: 0;
     border: 0;
-    border-right: 1px solid #000;
-    border-bottom: 1px solid #000;
+    border-right: 1px solid var(--fg);
+    border-bottom: 1px solid var(--fg);
     border-radius: 0;
-    background: #fff;
+    background: transparent;
     cursor: pointer;
   }
   .cell:disabled {
     cursor: default;
   }
-  .cell.on {
-    background: #1c6fb8;
+  .cell::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--orange) 60%, transparent);
+    opacity: 0;
+    transform: scale(0.4);
+    transition:
+      opacity var(--t-fast) var(--ease-out),
+      transform var(--t-fast) var(--ease-spring);
+  }
+  .cell.on::after {
+    opacity: 1;
+    transform: none;
+  }
+  .cell:not(:disabled):hover::after {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+  .cell.on:not(:disabled):hover::after {
+    opacity: 1;
+    transform: none;
   }
   .cell:focus-visible {
-    outline: 3px solid #c9591a;
-    outline-offset: -3px;
+    outline: 2px solid var(--ui);
+    outline-offset: -2px;
+    border-radius: 0;
   }
   .dot {
     position: absolute;
@@ -144,8 +173,8 @@
     height: 8px;
     margin: -4px 0 0 -4px;
     border-radius: 50%;
-    background: #000;
-    box-shadow: 0 0 0 2px #fff;
+    background: var(--fg);
+    box-shadow: 0 0 0 2px var(--bg);
     pointer-events: none;
   }
 </style>
