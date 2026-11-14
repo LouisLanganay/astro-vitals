@@ -6,7 +6,7 @@ use astro_vitals_core::model::{
     AppError, Assessment, DailyCheck, DayView, Document, Indicator, Notice, Packet, PacketExport,
     PvtInput, PvtResult, RulesError, ScenarioId, ScenarioInfo, Series, Settings, VisionResult,
 };
-use astro_vitals_core::rules::RuleSet;
+use astro_vitals_core::rules::{RuleCatalog, RuleSet};
 use astro_vitals_core::{baseline, mission, packet, pvt, rules, scenario, validate};
 use chrono::NaiveDate;
 use tauri::State;
@@ -128,6 +128,10 @@ impl AppState {
         validate::settings(&settings)?;
         self.update(|doc| doc.settings = settings)
     }
+
+    fn rule_catalog(&self) -> Result<RuleCatalog, AppError> {
+        Ok(rules::catalog(self.rules()?))
+    }
 }
 
 fn replace_data(doc: &mut Document, new: Document) {
@@ -206,6 +210,11 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<Settings, AppError> {
 #[tauri::command]
 pub fn set_settings(state: State<'_, AppState>, settings: Settings) -> Result<(), AppError> {
     state.set_settings(settings)
+}
+
+#[tauri::command]
+pub fn rules(state: State<'_, AppState>) -> Result<RuleCatalog, AppError> {
+    state.rule_catalog()
 }
 
 #[cfg(test)]
@@ -363,6 +372,7 @@ mod tests {
             state.load_scenario(ScenarioId::Healthy, today).err(),
             state.get_settings().err(),
             state.set_settings(settings).err(),
+            state.rule_catalog().err(),
         ];
         let expected = AppError::Rules {
             rule_id: Some("bad_rule".into()),
@@ -371,6 +381,21 @@ mod tests {
         for error in errors {
             assert_eq!(error, Some(expected.clone()));
         }
+        assert!(names(&dir).is_empty());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn rule_catalog_lists_the_embedded_rules() {
+        let dir = temp_dir("catalog");
+        let today = day("2026-11-14");
+        let state = ready(&dir, today);
+        let catalog = state.rule_catalog().unwrap();
+        let set = state.rules().unwrap();
+        assert_eq!(catalog.drift, set.drift);
+        let ids: Vec<&str> = catalog.rules.iter().map(|r| r.id.as_str()).collect();
+        let expected: Vec<&str> = set.rules.iter().map(|r| r.id.as_str()).collect();
+        assert_eq!(ids, expected);
         assert!(names(&dir).is_empty());
         fs::remove_dir_all(&dir).unwrap();
     }

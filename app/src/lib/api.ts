@@ -10,6 +10,7 @@ import type {
   PacketExport,
   PvtInput,
   PvtResult,
+  RuleCatalog,
   ScenarioId,
   ScenarioInfo,
   Series,
@@ -38,6 +39,8 @@ export const loadScenario = (id: ScenarioId) => invoke<ScenarioInfo>('load_scena
 export const getSettings = () => invoke<Settings>('get_settings');
 
 export const setSettings = (settings: Settings) => invoke<void>('set_settings', { settings });
+
+export const rules = () => invoke<RuleCatalog>('rules');
 
 export const pickExportPath = (defaultName: string) =>
   save({ defaultPath: defaultName, filters: [{ name: 'JSON', extensions: ['json'] }] });

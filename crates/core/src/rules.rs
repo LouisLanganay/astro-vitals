@@ -16,7 +16,7 @@ pub const EPSILON: f64 = 1e-9;
 pub const MAX_WINDOW_DAYS: u32 = 365;
 pub const PERSISTENT_TESTS: usize = 2;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RuleKind {
     Absolute,
@@ -29,7 +29,7 @@ pub enum RuleKind {
     VisionPersistent,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DriftLevels {
     pub self_care: f64,
     pub tell_cmo: f64,
@@ -56,6 +56,52 @@ pub struct Rule {
 pub struct RuleSet {
     pub drift: DriftLevels,
     pub rules: Vec<Rule>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct RuleInfo {
+    pub id: String,
+    pub indicator: String,
+    pub kind: RuleKind,
+    pub level: Level,
+    pub threshold: Option<f64>,
+    pub window_days: Option<u32>,
+    pub min_days: Option<u32>,
+    pub sustain_days: Option<u32>,
+    pub body_region: Option<BodyRegion>,
+    pub action: String,
+    pub explanation: String,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct RuleCatalog {
+    pub drift: DriftLevels,
+    pub rules: Vec<RuleInfo>,
+}
+
+pub fn catalog(set: &RuleSet) -> RuleCatalog {
+    RuleCatalog {
+        drift: set.drift.clone(),
+        rules: set
+            .rules
+            .iter()
+            .map(|rule| RuleInfo {
+                id: rule.id.clone(),
+                indicator: rule.indicator.clone(),
+                kind: rule.kind,
+                level: rule.level,
+                threshold: rule.threshold,
+                window_days: rule.window_days,
+                min_days: rule.min_days,
+                sustain_days: rule.sustain_days,
+                body_region: rule.body_region,
+                action: rule.action.clone(),
+                explanation: rule.explanation.clone(),
+                source: rule.source.clone(),
+            })
+            .collect(),
+    }
 }
 
 fn named<T: Copy + Serialize>(all: &[T], name: &str) -> Option<T> {
