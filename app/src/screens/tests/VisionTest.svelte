@@ -201,6 +201,11 @@
 {:else if step === 'calibrate' || !calibration}
   <div class="grid g-7-5">
     <div class="stack">
+      {#if !calibration}
+        <p class="banner warn" role="alert">
+          Calibrate the screen first. The letter size depends on it.
+        </p>
+      {/if}
       {#if error}
         <p class="banner error" role="alert">The calibration was not saved. {errorText(error)}</p>
       {/if}
