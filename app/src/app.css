@@ -77,22 +77,6 @@
 [data-lv='flight_surgeon'] { --lc: var(--red); }
 [data-lv='not_enough_data'], [data-lv='nodata'], [data-lv='none'] { --lc: var(--muted); }
 
-/* Aliases for the screens that still use the first names. Phase 2 removes them. */
-:root {
-  --surface: var(--card-b);
-  --border: var(--line-2);
-  --text: var(--fg);
-  --hover: var(--well-2);
-  --accent: var(--ui);
-  --accent-soft: color-mix(in srgb, var(--ui) 18%, var(--well));
-  --level-none: var(--muted);
-  --level-ok: var(--green);
-  --level-self-care: var(--yellow);
-  --level-tell-cmo: var(--orange);
-  --level-flight-surgeon: var(--red);
-  --radius: 14px;
-}
-
 *,
 *::before,
 *::after {
