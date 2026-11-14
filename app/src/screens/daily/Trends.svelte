@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { catalog, loadCatalog, thresholdLines } from '../../lib/catalog.svelte';
   import { getSettings, series } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
   import Icon from '../../lib/Icon.svelte';
@@ -19,7 +20,6 @@
   } from '../../lib/types';
   import LineChart from './LineChart.svelte';
   import { num } from './num';
-  import { DRIFT_LEVELS, THRESHOLDS, WEEKLY } from './thresholds';
 
   type Range = 'all' | 30 | 14;
   const RANGES: [Range, string][] = [
@@ -51,6 +51,9 @@
   let range = $state<Range>('all');
   let results = $state.raw<Partial<Record<Indicator, Series | AppError>>>({});
   let prescription = $state<number | null>(null);
+  const WEEKLY: readonly Indicator[] = ['acuity_left', 'acuity_right', 'amsler_left', 'amsler_right'];
+  const drift = $derived(catalog.value?.drift ?? null);
+  loadCatalog();
   const shown = $derived<readonly Indicator[]>(
     app.route.indicator ? [app.route.indicator] : INDICATORS,
   );
@@ -84,14 +87,9 @@
   }
 
   function thresholdsOf(id: Indicator) {
-    return (THRESHOLDS[id] ?? []).flatMap((t) =>
-      t.value === 'prescription'
-        ? prescription === null
-          ? []
-          : [{ value: prescription, level: t.level }]
-        : [{ value: t.value, level: t.level }],
-    );
+    return thresholdLines(id, prescription);
   }
+
 
   function lastValue(s: Series) {
     for (let k = s.points.length - 1; k >= 0; k--) if (s.points[k].value !== null) return s.points[k];
@@ -126,9 +124,14 @@
     </div>
     <p class="small muted formula">
       Baseline: median of the {BASELINE_DAYS} pre-flight days. Drift score = (7-day mean minus
-      baseline median) / (1.4826 x MAD), counted in the bad direction only. A score of
-      {DRIFT_LEVELS.self_care} or more is self-care, {DRIFT_LEVELS.tell_cmo} or more is tell the CMO.
+      baseline median) / (1.4826 x MAD), counted in the bad direction only.
+      {#if drift}
+        A score of {drift.self_care} or more is self-care, {drift.tell_cmo} or more is tell the CMO.
+      {/if}
       A gap shows days with no data.
+      {#if catalog.failed}
+        <span class="err">Rules unavailable: the chart shows no rule threshold.</span>
+      {/if}
     </p>
     <label class="pick">
       <span class="lbl">Indicator</span>

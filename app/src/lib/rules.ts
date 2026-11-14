@@ -1,5 +1,6 @@
 import { INDICATOR_INFO, RED_FLAG_LABEL, SYMPTOM_LABEL } from './labels';
-import type { FiredRule, Indicator } from './types';
+import { ruleThreshold } from './catalog.svelte';
+import type { FiredRule, Indicator, RedFlagKind, RuleInfo } from './types';
 
 const INDICATOR_TITLE: Record<Indicator, string> = {
   sleep_hours: 'Short sleep',
@@ -66,3 +67,47 @@ export function sourceLabel(source: string): string {
 }
 
 export const isUrl = (source: string) => /^https?:\/\//.test(source);
+
+const isIndicator = (name: string): name is Indicator => name in INDICATOR_TITLE;
+
+export function catalogTitle(r: RuleInfo): string {
+  if (r.kind === 'red_flag') return `Red flag: ${(RED_FLAG_LABEL[r.indicator as RedFlagKind] ?? r.indicator).toLowerCase()}`;
+  if (r.kind === 'symptom_duration') return 'A symptom that lasts';
+  if (r.kind === 'symptom_recurrence') return 'A symptom that comes back';
+  if (r.kind === 'symptom_unresolved') return 'A treated symptom that does not improve';
+  return isIndicator(r.indicator) ? INDICATOR_TITLE[r.indicator] : r.indicator;
+}
+
+export function catalogCondition(r: RuleInfo, prescription: number | null): string {
+  const t = ruleThreshold(r);
+  const days = (n: number | null) => (n == null ? '' : ` for ${n} days`);
+  const data = r.min_days == null ? '' : `, ${r.min_days} days with data minimum`;
+  switch (r.kind) {
+    case 'absolute': {
+      if (!isIndicator(r.indicator)) return '';
+      const dir = INDICATOR_INFO[r.indicator].bad === 'high' ? 'above' : 'below';
+      const limit = t == null ? (prescription == null ? 'the prescription' : `the prescription, ${prescription} min`) : formatValue(r.indicator, t);
+      return `Mean ${dir} ${limit}${days(r.window_days)}${data}`;
+    }
+    case 'drift': {
+      const run = r.sustain_days == null ? '' : `, on ${r.sustain_days} days in sequence`;
+      return `Drift score ${t == null ? '' : `${round(t, 0)} or more `}on the ${r.window_days ?? 7}-day mean${run}${data}`;
+    }
+    case 'symptom_duration':
+      return `The same symptom on more than ${round(t ?? 0, 0)} days in sequence`;
+    case 'symptom_recurrence':
+      return `${round(t ?? 0, 0)} episodes or more of the same symptom in ${r.window_days ?? 30} days`;
+    case 'symptom_unresolved':
+      return 'You treated the symptom and it did not improve';
+    case 'vision_change':
+      return r.indicator.startsWith('acuity')
+        ? `Acuity ${round(t ?? 0, 1)} logMAR or more worse than before the flight`
+        : 'A new distortion on the Amsler grid';
+    case 'vision_persistent':
+      return r.indicator.startsWith('acuity')
+        ? `Acuity ${round(t ?? 0, 1)} logMAR or more worse on 2 tests in sequence`
+        : 'A distortion on the Amsler grid on 2 tests in sequence';
+    case 'red_flag':
+      return 'You set this sign in the daily check';
+  }
+}

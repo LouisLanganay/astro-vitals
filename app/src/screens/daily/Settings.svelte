@@ -2,9 +2,10 @@
   import { getSettings, loadScenario, setSettings } from '../../lib/api';
   import { errorText, fieldMessage, toAppError } from '../../lib/errors';
   import { missionDayLabel } from '../../lib/format';
-  import { INDICATOR_INFO, RED_FLAG_LABEL, SCENARIO_LABEL, STATE_LABEL, SYMPTOM_LABEL } from '../../lib/labels';
+  import { INDICATOR_INFO, SCENARIO_LABEL, STATE_LABEL } from '../../lib/labels';
   import LevelBadge from '../../lib/LevelBadge.svelte';
-  import { formatValue, isUrl, ruleFact, ruleTitle, sourceLabel } from '../../lib/rules';
+  import { catalog, loadCatalog } from '../../lib/catalog.svelte';
+  import { catalogCondition, catalogTitle, formatValue, isUrl, ruleFact, sourceLabel } from '../../lib/rules';
   import { app, refresh } from '../../lib/state.svelte';
   import {
     BASELINE_DAYS,
@@ -12,7 +13,6 @@
     SCENARIO_IDS,
     type AppError,
     type FieldError,
-    type FiredRule,
     type Level,
     type ScenarioId,
     type ScenarioInfo,
@@ -20,7 +20,6 @@
   } from '../../lib/types';
 
   import { minutesError, num } from './num';
-  import { DRIFT_LEVELS } from './thresholds';
 
   const REQUIRED = 'Enter a value.';
 
@@ -43,7 +42,12 @@
     ...LEVELS.filter((l) => l !== 'ok').map((l): [Level, string] => [l, STATE_LABEL[l]]),
   ];
   const fired = $derived(app.assessment?.fired ?? []);
-  const rules = $derived(filter === 'all' ? fired : fired.filter((r) => r.level === filter));
+  const firedById = $derived(new Map(fired.map((r) => [r.rule_id, r])));
+  const all = $derived(catalog.value?.rules ?? []);
+  const ordered = $derived([...all.filter((r) => firedById.has(r.id)), ...all.filter((r) => !firedById.has(r.id))]);
+  const rules = $derived(filter === 'all' ? ordered : ordered.filter((r) => r.level === filter));
+  const drift = $derived(catalog.value?.drift ?? null);
+  loadCatalog();
   const indicators = $derived(app.assessment?.indicators ?? []);
 
   async function load() {
@@ -111,12 +115,6 @@
     }
   }
 
-  function subjectLabel(rule: FiredRule) {
-    const s = rule.subject;
-    if (s.type === 'indicator') return INDICATOR_INFO[s.value].label;
-    if (s.type === 'symptom') return `Symptom: ${SYMPTOM_LABEL[s.value].toLowerCase()}`;
-    return `Red flag: ${RED_FLAG_LABEL[s.value].toLowerCase()}`;
-  }
 </script>
 
 {#snippet fieldError(field: string)}
@@ -131,11 +129,14 @@
     <header>
       <div>
         <h2 id="st-r">
-          {fired.length} {fired.length === 1 ? 'rule' : 'rules'} fired today, each with a source
+          {all.length || ''} {all.length === 1 ? 'rule' : 'rules'}, each with a source
         </h2>
         <p class="small muted sub">
-          A rule marked as a design selection needs a medical review. Drift levels: a score of
-          {DRIFT_LEVELS.self_care} or more is self-care, {DRIFT_LEVELS.tell_cmo} or more is tell the CMO.
+          A rule marked as a design selection needs a medical review.
+          {#if drift}
+            Drift levels: a score of {drift.self_care} or more is self-care, {drift.tell_cmo} or more is tell the CMO.
+          {/if}
+          {fired.length} {fired.length === 1 ? 'rule fires' : 'rules fire'} today.
         </p>
       </div>
       <div class="seg" role="group" aria-label="Filter by level">
@@ -146,20 +147,24 @@
         {/each}
       </div>
     </header>
-    {#if !app.assessment}
-      <p class="muted" role="status">{app.loading ? 'Loading...' : 'The assessment is not available.'}</p>
+    {#if !catalog.value}
+      <p class="muted" role="status">{catalog.failed ? 'Rules unavailable: the rule catalog did not load.' : 'Loading...'}</p>
     {:else}
       {#key filter}
         <div class="rules">
-          {#each rules as rule, k (rule.rule_id)}
-            {@const fact = ruleFact(rule)}
-            <article class="rrow rise" style:--i={Math.min(k, 10)}>
-              <div><LevelBadge state={rule.level} /></div>
+          {#each rules as rule, k (rule.id)}
+            {@const hit = firedById.get(rule.id)}
+            {@const fact = hit ? ruleFact(hit) : null}
+            <article class="rrow rise" class:hit={!!hit} style:--i={Math.min(k, 10)}>
+              <div class="lv">
+                <LevelBadge state={rule.level} />
+                {#if hit}<span class="today">Fires today</span>{/if}
+              </div>
               <div>
-                <h3>{ruleTitle(rule)}</h3>
+                <h3>{catalogTitle(rule)}</h3>
                 <p class="meta">
-                  <code>{rule.rule_id}</code>
-                  {subjectLabel(rule)}{fact ? `, ${fact}` : ''}
+                  <code>{rule.id}</code>
+                  {catalogCondition(rule, prescription)}{fact ? `. Today: ${fact}` : ''}
                 </p>
                 <p class="exp">{rule.explanation}</p>
               </div>
@@ -175,9 +180,7 @@
               </p>
             </article>
           {:else}
-            <p class="muted empty">
-              {fired.length ? 'No fired rule at this level.' : 'No rule fired today.'}
-            </p>
+            <p class="muted empty">No rule at this level.</p>
           {/each}
         </div>
       {/key}
@@ -355,6 +358,23 @@
     gap: 10px 22px;
     padding: 18px 0;
     border-top: 1px solid var(--line);
+  }
+  .rrow .lv {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .today {
+    font-size: 11.5px;
+    color: var(--fg);
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: var(--well-2);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+  }
+  .rrow:not(.hit) h3 {
+    color: var(--muted);
   }
   .rrow:first-child {
     border-top: 0;
