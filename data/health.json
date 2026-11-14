@@ -1,0 +1,444 @@
+{
+  "_meta": {
+    "version": "0.2.1",
+    "note": "Demo values for a hackathon tool, not medical advice. Each value cites its source; 'assumption' marks a value we chose where no primary source gives one.",
+    "status_rule": "A reading is green inside 'green', orange inside 'orange' (outside green), red otherwise. Ranges are inclusive [min, max]; null = no bound.",
+    "flight_rule": "temp: before applying thresholds, subtract the expected in-flight rise for the current day (drift.<location>.temp_rise_c, linear from day 0 to reached_at_day). A +1 °C rise alone stays green on long missions.",
+    "to_verify": "Thresholds and study figures were written from memory during the hackathon: check against the sources before the final submission.",
+    "zones": "heart, metabolism, brain, sleep, bones, skin, eyes, back, core (core = whole body: the silhouette outline glows, used for temperature)"
+  },
+  "sources": {
+    "aha_bp": "American Heart Association, Understanding Blood Pressure Readings (2017 ACC/AHA categories) - heart.org",
+    "aha_hr": "American Heart Association, All About Heart Rate (resting 60-100 bpm) - heart.org",
+    "ada_glucose": "American Diabetes Association, Standards of Care: Diagnosis (fasting 100-125 prediabetes, >=126 diabetes); hypoglycemia level 1 <70, level 2 <54 mg/dL",
+    "temp_clinical": "Usual clinical ranges: 36.1-37.2 °C normal, >=38.0 °C fever, <35 °C hypothermia",
+    "stahn_2017": "Stahn A.C. et al., Increased core body temperature in astronauts during long-duration space missions, Scientific Reports 7, 16180 (2017): about +1 °C at rest after ~2.5 months",
+    "aasm_sleep": "AASM / Sleep Research Society consensus: adults need 7 h or more per night (Watson et al., Sleep 2015)",
+    "barger_2014": "Barger L.K. et al., Prevalence of sleep deficiency and use of hypnotics in astronauts, Lancet Neurology 13(9) (2014): about 6 h/night on the ISS",
+    "nasa_hrp_bone": "NASA Human Research Program, Risks of Human Spaceflight: bone loss of about 1-1.5 % per month in weight-bearing bones in microgravity - nasa.gov/hrp/risks",
+    "nasa_hrp_hazards": "NASA Human Research Program, 5 Hazards of Human Spaceflight - nasa.gov/hrp/hazards",
+    "nasa_std_3001": "NASA-STD-3001 Vol. 1 Rev. B (2022): career effective dose limit 600 mSv",
+    "nasa_iss_dose": "NASA: ISS crew receive about 80-160 mSv over a 6-month mission (about 0.4-0.9 mSv/day)",
+    "zeitlin_2013": "Zeitlin C. et al., Measurements of energetic particle radiation in transit to Mars on the Mars Science Laboratory, Science 340 (2013): 1.84 mSv/day in cruise",
+    "zhang_2020": "Zhang S. et al., First measurements of the radiation dose on the lunar surface (Chang'e 4 LND), Science Advances 6(39) (2020): 1.369 mSv/day",
+    "assumption": "Chosen by the team for the demo, no primary source",
+    "basner_2011": "Basner M., Mollicone D., Dinges D.F., Validity and sensitivity of a brief psychomotor vigilance test (PVT-B), Acta Astronautica 69 (2011): 3-minute test, lapse = response > 355 ms",
+    "nasa_reaction_self_test": "NASA ISS experiment Reaction Self Test (Dinges, Basner): astronauts run a 3-minute PVT on a laptop or iPad to track fatigue - nasa.gov ISS research",
+    "nasa_hrp_sans": "NASA Human Research Program, Spaceflight Associated Neuro-ocular Syndrome (SANS): optic disc edema, globe flattening, hyperopic shift on long missions - nasa.gov/hrp",
+    "mader_2011": "Mader T.H. et al., Optic disc edema, globe flattening, choroidal folds and hyperopic shifts in astronauts after long-duration space flight, Ophthalmology 118(10) (2011)",
+    "kerstman_2012": "Kerstman E.L. et al., Space adaptation back pain: a retrospective study, Aviation, Space and Environmental Medicine 83(1) (2012): about half of astronauts report back pain, mostly in the first days",
+    "johnston_2010": "Johnston S.L. et al., Risk of herniated nucleus pulposus among U.S. astronauts, Aviation, Space and Environmental Medicine 81(6) (2010): about 4x higher disc herniation risk after flight",
+    "nrs_pain": "Numeric pain rating scale 0-10: 1-3 mild, 4-6 moderate, 7-10 severe (common clinical cut-offs)"
+  },
+  "metrics": {
+    "heart_rate": {
+      "label": "Resting heart rate",
+      "unit": "bpm",
+      "body_zone": "heart",
+      "green": [
+        60,
+        100
+      ],
+      "orange": [
+        50,
+        120
+      ],
+      "source": "aha_hr",
+      "advice": {
+        "orange": "Rest 5 minutes and measure again. Note caffeine, exercise or stress.",
+        "red": "Measure again at rest. If it stays out of range, or with chest pain, dizziness or shortness of breath, contact the flight surgeon."
+      }
+    },
+    "bp_sys": {
+      "label": "Systolic blood pressure",
+      "unit": "mmHg",
+      "body_zone": "heart",
+      "green": [
+        90,
+        129
+      ],
+      "orange": [
+        85,
+        139
+      ],
+      "source": "aha_bp",
+      "advice": {
+        "orange": "Measure again seated after 5 minutes of rest, twice, 1 minute apart. Watch salt and hydration.",
+        "red": "Above 140 (or below 85): measure again, then report to the flight surgeon. Above 180: contact the ground now."
+      },
+      "urgent_above": 180
+    },
+    "bp_dia": {
+      "label": "Diastolic blood pressure",
+      "unit": "mmHg",
+      "body_zone": "heart",
+      "green": [
+        60,
+        79
+      ],
+      "orange": [
+        55,
+        89
+      ],
+      "source": "aha_bp",
+      "advice": {
+        "orange": "Measure again after rest. Note it in the log.",
+        "red": "Measure again, then report to the flight surgeon. Above 120: contact the ground now."
+      },
+      "urgent_above": 120
+    },
+    "glucose": {
+      "label": "Fasting blood glucose",
+      "unit": "mg/dL",
+      "body_zone": "metabolism",
+      "green": [
+        70,
+        99
+      ],
+      "orange": [
+        54,
+        125
+      ],
+      "source": "ada_glucose",
+      "advice": {
+        "orange": "Below 70: eat 15 g of fast sugar and measure again in 15 minutes. 100-125: check meals and exercise, measure again tomorrow fasting.",
+        "red": "Below 54: take sugar now and alert the crew. 126 or more: measure again fasting, then report to the flight surgeon."
+      }
+    },
+    "temp": {
+      "label": "Body temperature",
+      "unit": "°C",
+      "body_zone": "core",
+      "green": [
+        36.1,
+        37.5
+      ],
+      "orange": [
+        35.0,
+        37.9
+      ],
+      "source": "temp_clinical",
+      "space_note": "Core temperature rises by about 1 °C at rest on long missions (stahn_2017): a mild rise alone is expected, look at the trend and symptoms.",
+      "advice": {
+        "orange": "Hydrate, measure again in 1 hour, note any symptoms.",
+        "red": "38 °C or more: possible infection (the immune system changes in space). Isolate if possible and contact the flight surgeon."
+      }
+    },
+    "sleep_h": {
+      "label": "Sleep last night",
+      "unit": "h",
+      "body_zone": "sleep",
+      "green": [
+        7,
+        10
+      ],
+      "orange": [
+        6,
+        12
+      ],
+      "source": "aasm_sleep",
+      "space_note": "ISS crews sleep about 6 h on average (barger_2014). Sleep debt adds up over days.",
+      "trend_rule": "Orange if the 7-day average is under 6.5 h, even when last night was green.",
+      "advice": {
+        "orange": "Protect the next sleep slot: dim the light 1 hour before, eye mask, no screen.",
+        "red": "Under 6 h several nights in a row lowers attention: avoid critical tasks if possible and tell the commander."
+      }
+    },
+    "mood": {
+      "label": "Mood (self-rating)",
+      "unit": "1-5",
+      "body_zone": "brain",
+      "green": [
+        4,
+        5
+      ],
+      "orange": [
+        3,
+        3
+      ],
+      "source": "assumption",
+      "space_note": "Isolation and confinement is one of the 5 hazards (nasa_hrp_hazards).",
+      "trend_rule": "Orange if the 7-day average drops by 1 point or more.",
+      "advice": {
+        "orange": "Plan a call with family, an exercise session or a crew activity.",
+        "red": "Talk to the flight psychologist at the next private conference. You are not alone."
+      }
+    },
+    "bone_loss_pct": {
+      "label": "Bone density lost since launch",
+      "unit": "%",
+      "body_zone": "bones",
+      "green": [
+        0,
+        3
+      ],
+      "orange": [
+        0,
+        6
+      ],
+      "source": "assumption",
+      "space_note": "About 1-1.5 % lost per month in microgravity (nasa_hrp_bone). Thresholds are a demo choice.",
+      "advice": {
+        "orange": "Keep the daily resistance exercise (2 h/day on the ISS), calcium and vitamin D.",
+        "red": "Report to the flight surgeon: increase resistance exercise, avoid high-impact tasks."
+      }
+    },
+    "radiation_msv": {
+      "label": "Cumulative radiation dose",
+      "unit": "mSv",
+      "body_zone": "skin",
+      "green": [
+        0,
+        300
+      ],
+      "orange": [
+        0,
+        480
+      ],
+      "source": "nasa_std_3001",
+      "space_note": "Thresholds = 50 % and 80 % of the 600 mSv career limit (nasa_std_3001); orange and red are a demo choice.",
+      "advice": {
+        "orange": "Spend sleep time in the most shielded area. Check upcoming solar activity.",
+        "red": "Close to the career limit: the ground decides on EVAs and the mission plan."
+      }
+    },
+    "reaction_time_ms": {
+      "label": "Reaction time (3-min vigilance test)",
+      "unit": "ms",
+      "body_zone": "brain",
+      "green": [
+        0,
+        300
+      ],
+      "orange": [
+        0,
+        355
+      ],
+      "source": "basner_2011",
+      "space_note": "Astronauts already run this test on the ISS (nasa_reaction_self_test). Mean above 355 ms = the lapse threshold. Green limit 300 ms is a demo choice.",
+      "input_hint": "Tap as soon as a counter appears, random delay 2-10 s, for 3 minutes; value = mean response time.",
+      "advice": {
+        "orange": "Fatigue sign: check last nights' sleep, take a break before a precise task.",
+        "red": "Slowed reflexes: avoid robotic arm, EVA or other critical tasks until rested, tell the commander."
+      }
+    },
+    "vision_lines_lost": {
+      "label": "Near vision change (lines lost on the eye chart vs before launch)",
+      "unit": "lines",
+      "body_zone": "eyes",
+      "green": [
+        0,
+        0
+      ],
+      "orange": [
+        1,
+        1
+      ],
+      "source": "nasa_hrp_sans",
+      "space_note": "SANS: fluid shifts toward the head can change the eye on long missions (mader_2011). Thresholds are a demo choice.",
+      "advice": {
+        "orange": "Do the test again tomorrow in the same light; note headaches.",
+        "red": "Report to the flight surgeon: an eye ultrasound or OCT check may be planned."
+      }
+    },
+    "back_pain": {
+      "label": "Back pain (0-10)",
+      "unit": "0-10",
+      "body_zone": "back",
+      "green": [
+        0,
+        3
+      ],
+      "orange": [
+        4,
+        6
+      ],
+      "source": "nrs_pain",
+      "space_note": "The spine lengthens in microgravity; about half of astronauts get back pain in the first days (kerstman_2012), and disc herniation risk is higher after return (johnston_2010).",
+      "advice": {
+        "orange": "Knees-to-chest position, gentle stretching, note it in the log.",
+        "red": "Severe or with numbness in the legs: contact the flight surgeon."
+      }
+    }
+  },
+  "drift": {
+    "_note": "Inputs for simulate(location, days). Rates per day unless stated. noise = standard deviation of the daily random part.",
+    "iss": {
+      "radiation_msv_per_day": {
+        "value": 0.65,
+        "range": [
+          0.44,
+          0.88
+        ],
+        "source": "nasa_iss_dose"
+      },
+      "bone_loss_pct_per_month": {
+        "value": 1.25,
+        "range": [
+          1.0,
+          1.5
+        ],
+        "source": "nasa_hrp_bone"
+      },
+      "sleep_h_mean": {
+        "value": 6.0,
+        "noise": 0.7,
+        "source": "barger_2014"
+      },
+      "temp_rise_c": {
+        "value": 1.0,
+        "reached_at_day": 75,
+        "source": "stahn_2017"
+      },
+      "back_pain": {
+        "value": 4,
+        "peak_days": [
+          1,
+          7
+        ],
+        "after": 1,
+        "source": "kerstman_2012",
+        "note": "Peak in the first week, then mostly resolves."
+      },
+      "reaction_time_ms": {
+        "base": 265,
+        "noise": 15,
+        "per_hour_sleep_debt": 12,
+        "source": "assumption",
+        "note": "Linked to the 7-day sleep average below 7 h."
+      },
+      "vision_lines_lost": {
+        "value": 1,
+        "reached_at_day": 120,
+        "probability": 0.3,
+        "source": "assumption",
+        "note": "SANS on part of the crew only (nasa_hrp_sans)."
+      }
+    },
+    "mars_transit": {
+      "radiation_msv_per_day": {
+        "value": 1.84,
+        "source": "zeitlin_2013"
+      },
+      "bone_loss_pct_per_month": {
+        "value": 1.25,
+        "range": [
+          1.0,
+          1.5
+        ],
+        "source": "nasa_hrp_bone",
+        "note": "Same microgravity as the ISS."
+      },
+      "sleep_h_mean": {
+        "value": 6.0,
+        "noise": 0.8,
+        "source": "assumption",
+        "note": "ISS value (barger_2014), more noise for distance and isolation."
+      },
+      "temp_rise_c": {
+        "value": 1.0,
+        "reached_at_day": 75,
+        "source": "stahn_2017"
+      },
+      "mood_drift_per_month": {
+        "value": -0.2,
+        "source": "assumption",
+        "note": "Isolation hazard, no ground contact in real time."
+      },
+      "back_pain": {
+        "value": 4,
+        "peak_days": [
+          1,
+          7
+        ],
+        "after": 1,
+        "source": "kerstman_2012",
+        "note": "Peak in the first week, then mostly resolves."
+      },
+      "reaction_time_ms": {
+        "base": 265,
+        "noise": 15,
+        "per_hour_sleep_debt": 12,
+        "source": "assumption",
+        "note": "Linked to the 7-day sleep average below 7 h."
+      },
+      "vision_lines_lost": {
+        "value": 1,
+        "reached_at_day": 120,
+        "probability": 0.3,
+        "source": "assumption",
+        "note": "SANS on part of the crew only (nasa_hrp_sans)."
+      }
+    },
+    "moon": {
+      "radiation_msv_per_day": {
+        "value": 1.37,
+        "source": "zhang_2020"
+      },
+      "bone_loss_pct_per_month": {
+        "value": 0.6,
+        "source": "assumption",
+        "note": "Partial gravity (1/6 g); no human data, demo value between ISS and Earth."
+      },
+      "sleep_h_mean": {
+        "value": 6.3,
+        "noise": 0.7,
+        "source": "assumption"
+      },
+      "temp_rise_c": {
+        "value": 0.5,
+        "reached_at_day": 75,
+        "source": "assumption"
+      },
+      "back_pain": {
+        "value": 4,
+        "peak_days": [
+          1,
+          7
+        ],
+        "after": 1,
+        "source": "kerstman_2012",
+        "note": "Peak in the first week, then mostly resolves."
+      },
+      "reaction_time_ms": {
+        "base": 265,
+        "noise": 15,
+        "per_hour_sleep_debt": 12,
+        "source": "assumption",
+        "note": "Linked to the 7-day sleep average below 7 h."
+      },
+      "vision_lines_lost": {
+        "value": 0,
+        "source": "assumption",
+        "note": "Short stays, partial gravity."
+      }
+    },
+    "baselines": {
+      "heart_rate": {
+        "value": 64,
+        "noise": 4
+      },
+      "bp_sys": {
+        "value": 115,
+        "noise": 5
+      },
+      "bp_dia": {
+        "value": 74,
+        "noise": 4
+      },
+      "glucose": {
+        "value": 88,
+        "noise": 6
+      },
+      "temp": {
+        "value": 36.7,
+        "noise": 0.15
+      },
+      "mood": {
+        "value": 4.3,
+        "noise": 0.5
+      },
+      "_source": "assumption: healthy adult baseline for the demo"
+    }
+  }
+}
