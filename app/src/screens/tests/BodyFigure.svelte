@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { tick } from 'svelte';
+
   import { getDay, saveDailyCheck } from '../../lib/api';
   import { errorText, toAppError } from '../../lib/errors';
   import FiredRuleCard from '../../lib/FiredRuleCard.svelte';
@@ -87,6 +89,17 @@
     error = null;
     notice = '';
     navigate('body', { region });
+    // On a narrow screen the panel is under the figure: bring it into view.
+    if (region) {
+      tick().then(() => {
+        const head = document.getElementById('b-p');
+        const top = head?.getBoundingClientRect().top ?? 0;
+        if (head && (top < 0 || top > innerHeight * 0.7)) {
+          const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          head.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+        }
+      });
+    }
   }
 
   async function logSymptom(e: SubmitEvent) {
