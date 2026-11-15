@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
 
   import { getDay, saveDailyCheck } from '../../lib/api';
+  import { openSymptoms } from '../../lib/symptoms';
   import { errorText, toAppError } from '../../lib/errors';
   import { figure, setSex, type Sex } from '../../lib/figure.svelte';
   import FiredRuleCard from '../../lib/FiredRuleCard.svelte';
@@ -123,7 +124,8 @@
     notice = '';
     try {
       const d = await getDay();
-      await saveDailyCheck({ ...d.check, symptoms: [...d.check.symptoms, symptom] });
+      const open = await openSymptoms(d);
+      await saveDailyCheck({ ...d.check, symptoms: [...open.symptoms, symptom] });
       await refresh();
       notice = `${SYMPTOM_LABEL[symptom.kind]} is saved.`;
     } catch (err) {

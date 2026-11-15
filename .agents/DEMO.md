@@ -68,3 +68,4 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 2. Do the steps above from "Today screen". The data stays in the browser storage.
 3. In "Export", the export button downloads the JSON file. There is no path dialog.
 4. On a phone or a tablet, the browser shows the interface 15% larger. The vision test asks for a new calibration one time after this change.
+5. A scenario starts from the day of its load. If you open the demo on a different day, load the scenario again in "Settings".
