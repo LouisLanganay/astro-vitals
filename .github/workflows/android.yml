@@ -84,6 +84,7 @@ jobs:
           cp android/app/build/outputs/apk/release/app-release.apk "../dist-apk/astro-vitals-${version}.apk"
 
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: astro-vitals-apk
           path: dist-apk/*.apk
