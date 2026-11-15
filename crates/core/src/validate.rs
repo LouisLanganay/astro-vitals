@@ -1,9 +1,9 @@
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, Days, NaiveDate};
 
 use crate::model::{
-    AMSLER_GRID_SIZE, Calibration, DailyCheck, EyeResult, FLUID_MAX_L, FieldError, MINUTES_PER_DAY,
-    PvtInput, PvtTrial, SCALE_MAX, SEVERITY_MAX, SEVERITY_MIN, Settings, ValidationError,
-    VisionResult,
+    AMSLER_GRID_SIZE, BASELINE_DAYS, Calibration, DailyCheck, EyeResult, FLUID_MAX_L, FieldError,
+    MINUTES_PER_DAY, PvtInput, PvtTrial, SCALE_MAX, SEVERITY_MAX, SEVERITY_MIN, Settings,
+    ValidationError, VisionResult,
 };
 use crate::pvt::TIMEOUT_MS;
 
@@ -12,6 +12,13 @@ pub const ACUITY_MAX_LOGMAR: f64 = 2.0;
 pub const PX_PER_MM_MAX: f64 = 100.0;
 pub const LAUNCH_YEAR_MIN: i32 = 2000;
 pub const LAUNCH_YEAR_MAX: i32 = 2200;
+
+pub fn first_day(launch: NaiveDate, today: NaiveDate) -> NaiveDate {
+    launch
+        .checked_sub_days(Days::new(BASELINE_DAYS.into()))
+        .unwrap_or(NaiveDate::MIN)
+        .min(today)
+}
 
 #[derive(Default)]
 struct Errors(Vec<FieldError>);
@@ -26,7 +33,9 @@ impl Errors {
         }
     }
 
-    fn date(&mut self, date: NaiveDate, today: NaiveDate) {
+    fn date(&mut self, date: NaiveDate, launch: NaiveDate, today: NaiveDate) {
+        let first = first_day(launch, today);
+        self.check(date >= first, "date", format!("must not be before {first}"));
         self.check(date <= today, "date", "must not be after today");
     }
 
@@ -62,9 +71,13 @@ impl Errors {
     }
 }
 
-pub fn daily_check(check: &DailyCheck, today: NaiveDate) -> Result<(), ValidationError> {
+pub fn daily_check(
+    check: &DailyCheck,
+    launch: NaiveDate,
+    today: NaiveDate,
+) -> Result<(), ValidationError> {
     let mut e = Errors::default();
-    e.date(check.date, today);
+    e.date(check.date, launch, today);
     if let Some(a) = &check.answers {
         for (field, minutes) in [
             ("answers.sleep_start_min", a.sleep_start_min),
@@ -120,9 +133,13 @@ pub fn daily_check(check: &DailyCheck, today: NaiveDate) -> Result<(), Validatio
     e.finish()
 }
 
-pub fn pvt_input(input: &PvtInput, today: NaiveDate) -> Result<(), ValidationError> {
+pub fn pvt_input(
+    input: &PvtInput,
+    launch: NaiveDate,
+    today: NaiveDate,
+) -> Result<(), ValidationError> {
     let mut e = Errors::default();
-    e.date(input.date, today);
+    e.date(input.date, launch, today);
     e.check(
         !input.trials.is_empty(),
         "trials",
@@ -143,6 +160,7 @@ pub fn pvt_input(input: &PvtInput, today: NaiveDate) -> Result<(), ValidationErr
 pub fn vision_result(
     result: &VisionResult,
     calibration: Option<&Calibration>,
+    launch: NaiveDate,
     today: NaiveDate,
 ) -> Result<(), ValidationError> {
     let mut e = Errors::default();
@@ -150,7 +168,7 @@ pub fn vision_result(
         Some(c) => e.calibration(c),
         None => e.check(false, "calibration", "calibrate the screen first"),
     }
-    e.date(result.date, today);
+    e.date(result.date, launch, today);
     e.eye("left", &result.left);
     e.eye("right", &result.right);
     e.finish()
