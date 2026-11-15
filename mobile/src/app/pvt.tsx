@@ -17,7 +17,7 @@ import {
   type PvtResult,
   type PvtTrial,
 } from '../lib/types';
-import { Banner, Btn, Card, Disclaimer, LevelBadge, Row, Screen, T, Well } from '../ui/kit';
+import { Banner, Btn, Card, Icon, LevelBadge, Row, Screen, T, Well } from '../ui/kit';
 import { C, F } from '../ui/theme';
 
 type Phase = 'intro' | 'running' | 'saving' | 'done' | 'cancelled';
@@ -157,9 +157,12 @@ export default function Pvt() {
         accessibilityLabel="Test area. Tap when the circle shows."
         style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', gap: 28 }}
       >
-        <T v="label">
-          {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')} left. {trials.current.length} trials.
-        </T>
+        <Row gap={6}>
+          <Icon name="clock" size={14} color={C.muted} />
+          <T v="label">
+            {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
+          </T>
+        </Row>
         <View
           style={{
             width: 200,
@@ -176,11 +179,8 @@ export default function Pvt() {
             {lit ? 'TAP' : feedback || 'Wait'}
           </T>
         </View>
-        <T v="small" color={C.faint} style={{ textAlign: 'center', paddingHorizontal: 32 }}>
-          Tap anywhere when the circle lights up. Do not tap before.
-        </T>
         <View style={{ position: 'absolute', bottom: 40 }}>
-          <Btn small kind="ghost" label="Stop the test" onPress={() => cancel('You stopped the test. It saved nothing.')} />
+          <Btn small kind="ghost" icon="close" label="Stop" a11y="Stop the test" onPress={() => cancel('You stopped the test. It saved nothing.')} />
         </View>
       </View>
     );
@@ -189,32 +189,34 @@ export default function Pvt() {
   const shown = result ?? app.day?.pvt ?? null;
   const stateOf = (i: Indicator) => app.assessment?.indicators.find((s) => s.indicator === i)?.state ?? 'not_enough_data';
   const rows = (r: PvtResult): { i: Indicator; label: string; value: string; help: string }[] => [
-    { i: 'pvt_mean_rt_ms', label: 'Mean reaction time', value: r.mean_rt_ms === null ? 'No valid response' : `${Math.round(r.mean_rt_ms)} ms`, help: 'A lower value is better.' },
+    { i: 'pvt_mean_rt_ms', label: 'Mean reaction time', value: r.mean_rt_ms === null ? '-' : `${Math.round(r.mean_rt_ms)} ms`, help: '' },
     { i: 'pvt_lapses', label: 'Lapses', value: String(r.lapses), help: `${PVT_LAPSE_MS} ms or more, or no response in ${PVT_TIMEOUT_MS / 1000} s.` },
     { i: 'pvt_false_starts', label: 'False starts', value: String(r.false_starts), help: `Tap before the signal, or below ${PVT_FALSE_START_MS} ms.` },
   ];
 
   return (
-    <Screen back title="PVT-B reaction test" eyebrow="3 minutes. Optional, one time each day.">
+    <Screen back title="PVT-B" eyebrow="Reaction test · 3 min">
       {phase === 'cancelled' ? <Banner tone="warn" text={reason} /> : null}
       {error ? <Banner tone="error" text={errorText(error)} /> : null}
       <Card>
-        <T v="h2">How to do the test</T>
-        <T v="small" color={C.muted}>
-          1. Hold the phone in your hand. Stay on this screen for 3 minutes.
-        </T>
-        <T v="small" color={C.muted}>
-          2. A circle lights up after 1 to 4 seconds. Tap the screen immediately.
-        </T>
-        <T v="small" color={C.muted}>
-          3. A tap before the circle is a false start. If the app goes to the background, the test stops and saves nothing.
-        </T>
-        <Btn kind="violet" icon="bolt" label={phase === 'saving' ? 'Saving...' : 'Start the test'} onPress={start} disabled={phase === 'saving'} />
+        <Row gap={10} style={{ flexWrap: 'nowrap' }}>
+          <Icon name="bolt" size={16} color={C.muted} />
+          <T v="small" color={C.muted} style={{ flex: 1 }}>
+            Tap when the circle lights up. Not before.
+          </T>
+        </Row>
+        <Row gap={10} style={{ flexWrap: 'nowrap' }}>
+          <Icon name="lock" size={16} color={C.muted} />
+          <T v="small" color={C.muted} style={{ flex: 1 }}>
+            Stay on this screen. If you leave it, the test stops and saves nothing.
+          </T>
+        </Row>
+        <Btn kind="violet" icon="bolt" label={phase === 'saving' ? 'Saving...' : 'Start'} onPress={start} disabled={phase === 'saving'} />
       </Card>
       {shown ? (
         <Card>
           <Row style={{ justifyContent: 'space-between' }}>
-            <T v="h2">{result ? 'Your result' : 'Result of today'}</T>
+            <T v="h2">Result</T>
             <T v="label">{shown.stimuli} stimuli</T>
           </Row>
           {rows(shown).map((r) => (
@@ -226,14 +228,15 @@ export default function Pvt() {
                 <LevelBadge state={stateOf(r.i)} />
               </Row>
               <T style={{ fontFamily: F.monoMedium, fontSize: r.value.length > 8 ? 18 : 26, lineHeight: 32 }}>{r.value}</T>
-              <T v="small" color={C.faint}>
-                {r.help}
-              </T>
+              {r.help ? (
+                <T v="small" color={C.faint}>
+                  {r.help}
+                </T>
+              ) : null}
             </Well>
           ))}
         </Card>
       ) : null}
-      <Disclaimer />
     </Screen>
   );
 }

@@ -12,7 +12,7 @@ import { BODY_REGIONS, type AppError, type BodyRegion, type Level, type Symptom 
 import { DotFigure } from '../../ui/DotFigure';
 import { FiredRuleCard } from '../../ui/FiredRuleCard';
 import { Chips } from '../../ui/form';
-import { Banner, Btn, Card, Disclaimer, LevelBadge, LevelIcon, Loading, Row, Screen, Seg, T, Well } from '../../ui/kit';
+import { Banner, Btn, Card, LevelBadge, LevelIcon, Loading, Row, Screen, Seg, T, Well } from '../../ui/kit';
 import { C, F } from '../../ui/theme';
 import { SymptomEditor } from '../../ui/SymptomEditor';
 
@@ -66,7 +66,7 @@ export default function Body() {
       await api.saveDailyCheck({ ...d.check, symptoms: [...d.check.symptoms, draft] });
       setDraft(null);
       setError(null);
-      setNote(`Saved: ${SYMPTOM_LABEL[draft.kind]}, ${REGION_LABEL[draft.region]}.`);
+      setNote(`${SYMPTOM_LABEL[draft.kind]} saved.`);
       await refresh();
     } catch (e) {
       setError(toAppError(e));
@@ -74,7 +74,7 @@ export default function Body() {
   }
 
   return (
-    <Screen title="Body" eyebrow="Tap a region to see its level">
+    <Screen title="Body">
       <Card style={{ alignItems: 'center' }}>
         <Row style={{ justifyContent: 'space-between', alignSelf: 'stretch' }}>
           <Seg items={[{ key: 'front', label: 'Front' }, { key: 'back', label: 'Back' }]} value={side} onChange={setSide} />
@@ -105,26 +105,27 @@ export default function Body() {
         </Row>
 
         <View style={{ gap: 8 }}>
-          <T v="label">Symptoms today</T>
+          <T v="label">Symptoms</T>
           {rs.symptoms.length ? (
             rs.symptoms.map((s, k) => (
               <Well key={k} style={{ padding: 12 }}>
                 <T style={{ fontFamily: F.medium }}>{SYMPTOM_LABEL[s.kind]}</T>
                 <T v="small" color={C.muted}>
-                  Severity {s.severity} of 3{s.treated ? `, treated, ${s.improved == null ? 'result not known' : s.improved ? 'improved' : 'not improved'}` : ''}
+                  {s.severity}/3{s.treated ? ` · treated${s.improved == null ? '' : s.improved ? ' · improved' : ' · not improved'}` : ''}
                 </T>
               </Well>
             ))
           ) : (
             <T v="small" color={C.muted}>
-              No symptom today.
+              None
             </T>
           )}
         </View>
 
+        {rs.indicators.length ? (
         <View style={{ gap: 8 }}>
-          <T v="label">Indicators</T>
-          {rs.indicators.length ? (
+          <T v="label">Indicators · 7-day mean</T>
+          {(
             rs.indicators.map((i) => (
               <Row key={i.indicator} style={{ justifyContent: 'space-between', flexWrap: 'nowrap', minHeight: 32 }}>
                 <Row gap={8} style={{ flex: 1, flexWrap: 'nowrap' }}>
@@ -138,17 +139,9 @@ export default function Body() {
                 </T>
               </Row>
             ))
-          ) : (
-            <T v="small" color={C.muted}>
-              No indicator for this region.
-            </T>
           )}
-          {rs.indicators.length ? (
-            <T v="small" color={C.faint}>
-              Values are 7-day means.
-            </T>
-          ) : null}
         </View>
+        ) : null}
 
         {rs.fired.length ? (
           <View style={{ gap: 10 }}>
@@ -165,14 +158,15 @@ export default function Body() {
             <SymptomEditor symptom={draft} onChange={setDraft} prefix="symptoms[0]" error={null} />
             {error ? <Banner tone="error" text={errorText(error)} /> : null}
             <Row>
-              <Btn kind="primary" icon="save" label="Save the symptom" onPress={log} />
+              <Btn kind="primary" icon="save" label="Save" onPress={log} />
               <Btn kind="ghost" label="Cancel" onPress={() => setDraft(null)} />
             </Row>
           </>
         ) : (
           <Btn
             icon="plus"
-            label={`Log a symptom: ${REGION_LABEL[region].toLowerCase()}`}
+            label="Add a symptom"
+            a11y={`Add a symptom: ${REGION_LABEL[region].toLowerCase()}`}
             onPress={() => {
               setNote(null);
               setDraft({ kind: REGION_KIND[region] ?? 'other', severity: 1, region, treated: false, improved: null });
@@ -180,7 +174,6 @@ export default function Body() {
           />
         )}
       </Card>
-      <Disclaimer />
     </Screen>
   );
 }

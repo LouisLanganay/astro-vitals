@@ -2,20 +2,19 @@ import { Linking, Pressable, View } from 'react-native';
 
 import { isUrl, ruleFact, ruleTitle, sourceLabel } from '../lib/rules';
 import type { FiredRule } from '../lib/types';
-import { Icon, IconBox, LevelBadge, LevelIcon, Row, T, Well } from './kit';
-import { C, F, LEVEL_COLOR } from './theme';
+import { Icon, LevelBadge, Row, T, Well } from './kit';
+import { C, F } from './theme';
 
 export function FiredRuleCard({ rule }: { rule: FiredRule }) {
   const fact = ruleFact(rule);
   return (
     <Well style={{ gap: 8 }}>
-      <Row>
-        <IconBox color={LEVEL_COLOR[rule.level]}>
-          <LevelIcon state={rule.level} size={11} />
-        </IconBox>
+      <Row style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
+        <T v="h3" style={{ flex: 1 }}>
+          {ruleTitle(rule)}
+        </T>
         <LevelBadge state={rule.level} />
       </Row>
-      <T v="h3">{ruleTitle(rule)}</T>
       <T style={{ fontFamily: F.medium }}>{rule.action}</T>
       {fact ? (
         <T v="small" color={C.muted}>
@@ -39,9 +38,12 @@ export function FiredRuleCard({ rule }: { rule: FiredRule }) {
             </T>
           </Pressable>
         ) : (
-          <T v="small" color={C.muted}>
-            Source: {rule.source}
-          </T>
+          <Row gap={6}>
+            <Icon name="link" size={13} color={C.muted} />
+            <T v="small" color={C.muted} style={{ flex: 1 }}>
+              {rule.source}
+            </T>
+          </Row>
         )}
       </View>
     </Well>

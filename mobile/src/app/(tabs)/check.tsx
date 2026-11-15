@@ -18,17 +18,17 @@ import {
 } from '../../lib/types';
 import { Field, Scale, Stepper, Toggle } from '../../ui/form';
 import { SymptomEditor } from '../../ui/SymptomEditor';
-import { Banner, Btn, Card, Disclaimer, Icon, Loading, Row, Screen, T } from '../../ui/kit';
+import { Banner, Btn, Card, Icon, LevelIcon, Loading, Row, Screen, T } from '../../ui/kit';
 import { C, F } from '../../ui/theme';
 
 type ScaleKey = 'sleep_quality' | 'mood' | 'stress' | 'tiredness' | 'workload';
 
 const SCALES: { key: ScaleKey; label: string; icon: IconName; help: string }[] = [
-  { key: 'sleep_quality', label: 'Sleep quality', icon: 'moon', help: '0 = very bad sleep. 10 = very good sleep.' },
-  { key: 'mood', label: 'Mood', icon: 'smile', help: '0 = very bad mood. 10 = very good mood.' },
-  { key: 'stress', label: 'Stress', icon: 'wave', help: '0 = no stress. 10 = the highest stress.' },
-  { key: 'tiredness', label: 'Tiredness', icon: 'battery', help: '0 = fully awake. 10 = too tired to work.' },
-  { key: 'workload', label: 'Workload', icon: 'brief', help: '0 = no work. 10 = more work than you can do.' },
+  { key: 'sleep_quality', label: 'Sleep quality', icon: 'moon', help: 'Bad → good' },
+  { key: 'mood', label: 'Mood', icon: 'smile', help: 'Bad → good' },
+  { key: 'stress', label: 'Stress', icon: 'wave', help: 'None → very high' },
+  { key: 'tiredness', label: 'Tiredness', icon: 'battery', help: 'Awake → too tired to work' },
+  { key: 'workload', label: 'Workload', icon: 'brief', help: 'None → too much' },
 ];
 
 const DEFAULT: DailyAnswers = {
@@ -101,8 +101,8 @@ export default function Check() {
   const hours = sleepHours(a);
 
   return (
-    <Screen title="Daily check" eyebrow={`${missionDayLabel(app.day?.mission.mission_day ?? 0)}, ${date}`}>
-      {base.answers ? <Banner text="You did the check today. A new save replaces it." /> : null}
+    <Screen title="Daily check" eyebrow={missionDayLabel(app.day?.mission.mission_day ?? 0)}>
+      {base.answers ? <Banner text="Done today. A new save replaces it." /> : null}
 
       <Card>
         <T v="h2">Sleep</T>
@@ -116,12 +116,12 @@ export default function Check() {
           <T v="big" style={{ fontSize: 34, lineHeight: 38, fontFamily: F.monoMedium }}>
             {fmt(hours, 1)}
           </T>
-          <T color={C.muted}>hours of sleep</T>
+          <T color={C.muted}>h</T>
         </Row>
         <Field label="Sleep quality" help={SCALES[0].help} error={msg('answers.sleep_quality')}>
           <Scale label="Sleep quality" value={a.sleep_quality} onChange={(v) => put('sleep_quality', v)} />
         </Field>
-        <Field label="Sleep aid" help="You took a medicine to sleep." error={msg('answers.sleep_aid')} right={<Toggle label="Sleep aid" value={a.sleep_aid} onChange={(v) => put('sleep_aid', v)} />}>
+        <Field label="Sleep aid" icon="pill" error={msg('answers.sleep_aid')} right={<Toggle label="Sleep aid" value={a.sleep_aid} onChange={(v) => put('sleep_aid', v)} />}>
           {null}
         </Field>
       </Card>
@@ -137,13 +137,13 @@ export default function Check() {
 
       <Card>
         <T v="h2">Fluid and exercise</T>
-        <Field label="Fluid intake" help="The sum of all drinks of the day, in litres." icon="drop" error={msg('answers.fluid_l')}>
+        <Field label="Fluid intake" icon="drop" error={msg('answers.fluid_l')}>
           <Stepper label="Fluid intake" value={a.fluid_l} text={`${fmt(a.fluid_l, 1)} L`} steps={[0.1, 0.5]} onChange={(v) => put('fluid_l', Math.max(0, Math.round(v * 10) / 10))} />
         </Field>
-        <Field label="Resistive exercise" help="Exercise against a load. It keeps muscle and bone." icon="dumbbell" error={msg('answers.exercise_resistive_min')}>
+        <Field label="Resistive exercise" icon="dumbbell" error={msg('answers.exercise_resistive_min')}>
           <Stepper label="Resistive exercise" value={a.exercise_resistive_min} text={`${a.exercise_resistive_min} min`} steps={[5, 15]} onChange={(v) => put('exercise_resistive_min', Math.max(0, v))} />
         </Field>
-        <Field label="Aerobic exercise" help="Treadmill or cycle exercise." icon="pulse" error={msg('answers.exercise_aerobic_min')}>
+        <Field label="Aerobic exercise" icon="pulse" error={msg('answers.exercise_aerobic_min')}>
           <Stepper label="Aerobic exercise" value={a.exercise_aerobic_min} text={`${a.exercise_aerobic_min} min`} steps={[5, 15]} onChange={(v) => put('exercise_aerobic_min', Math.max(0, v))} />
         </Field>
       </Card>
@@ -151,7 +151,7 @@ export default function Check() {
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
           <T v="h2">Symptoms</T>
-          <T v="label">{symptoms.length ? `${symptoms.length}` : 'None'}</T>
+          {symptoms.length ? <T v="label">{symptoms.length}</T> : null}
         </Row>
         {symptoms.map((sy, k) => (
           <SymptomEditor
@@ -166,13 +166,16 @@ export default function Check() {
             onRemove={() => setSymptoms((cur) => cur.filter((_, j) => j !== k))}
           />
         ))}
-        <Btn icon="plus" label="Add a symptom" onPress={() => setSymptoms((cur) => [...cur, { kind: 'headache', severity: 1, region: 'head', treated: false, improved: null }])} />
+        <Btn icon="plus" label="Add" onPress={() => setSymptoms((cur) => [...cur, { kind: 'headache', severity: 1, region: 'head', treated: false, improved: null }])} />
       </Card>
 
       <Card>
-        <T v="h2">Red flags</T>
+        <Row gap={8}>
+          <LevelIcon state="flight_surgeon" size={11} />
+          <T v="h2">Red flags</T>
+        </Row>
         <T v="small" color={C.muted}>
-          Set a sign only if you have it now. A red flag sets the level to "Flight surgeon".
+          Only if you have it now. A red flag sets the level to "Flight surgeon".
         </T>
         {RED_FLAG_KINDS.map((k) => {
           const on = flags.includes(k);
@@ -195,9 +198,8 @@ export default function Check() {
       </Card>
 
       {error ? <Banner tone="error" text={error.kind === 'validation' ? `Correct the fields in red: ${error.errors.length}.` : errorText(error)} /> : null}
-      {saved ? <Banner text="Saved. The level of today is up to date." /> : null}
-      <Btn kind="primary" icon="save" label={saving ? 'Saving...' : 'Save the check'} onPress={save} disabled={saving} />
-      <Disclaimer />
+      {saved ? <Banner text="Saved." /> : null}
+      <Btn kind="primary" icon="save" label={saving ? 'Saving...' : 'Save'} onPress={save} disabled={saving} />
     </Screen>
   );
 }

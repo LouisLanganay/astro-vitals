@@ -58,13 +58,13 @@ export default function SettingsScreen() {
 
   return (
     <Screen back title="Settings">
-      <Banner tone="warn" text="Prototype, not a medical device. The rules marked as a design selection need a medical review." />
+      <Banner tone="warn" text="Prototype, not a medical device. Some rules are design selections that need a medical review." />
       <Card>
         <T v="h2">Mission</T>
-        <Field label="Launch date" help={`Mission day ${days} today. A date in the future makes all days pre-flight days.`} icon="calendar" error={fieldMessage(error, 'launch_date')}>
+        <Field label="Launch date" help={`Mission day ${days}`} icon="calendar" error={fieldMessage(error, 'launch_date')}>
           <Stepper label="Launch date" value={0} text={draft.launch_date} steps={[1, 7]} onChange={(v) => setDraft({ ...draft, launch_date: addDays(draft.launch_date, v) })} />
         </Field>
-        <Field label="Exercise prescription" help="Minutes of exercise each day." icon="dumbbell" error={fieldMessage(error, 'exercise_prescription_min')}>
+        <Field label="Exercise each day" icon="dumbbell" error={fieldMessage(error, 'exercise_prescription_min')}>
           <Stepper
             label="Exercise prescription"
             value={draft.exercise_prescription_min}
@@ -75,14 +75,11 @@ export default function SettingsScreen() {
         </Field>
         {error && error.kind !== 'validation' ? <Banner tone="error" text={errorText(error)} /> : null}
         {note ? <Banner text={note} /> : null}
-        <Btn kind="primary" icon="save" label="Save the settings" onPress={save} />
+        <Btn kind="primary" icon="save" label="Save" onPress={save} />
       </Card>
 
       <Card>
         <T v="h2">Demo scenarios</T>
-        <T v="small" color={C.muted}>
-          A scenario replaces all stored data with a seeded mission of 120 days.
-        </T>
         {SCENARIO_IDS.map((id) => (
           <Well key={id} style={{ padding: 12 }}>
             <Row style={{ justifyContent: 'space-between' }}>
@@ -95,7 +92,7 @@ export default function SettingsScreen() {
                   This deletes all your data on this device. Continue?
                 </T>
                 <Row>
-                  <Btn small kind="danger" label={busy ? 'Loading...' : 'Replace my data'} onPress={() => load(id)} disabled={busy} />
+                  <Btn small kind="danger" label={busy ? 'Loading...' : 'Replace'} onPress={() => load(id)} disabled={busy} />
                   <Btn small kind="ghost" label="Cancel" onPress={() => setConfirm(null)} />
                 </Row>
               </View>
@@ -112,7 +109,7 @@ export default function SettingsScreen() {
               <Row key={e.level} gap={8}>
                 <LevelBadge state={e.level} />
                 <T v="small" color={C.muted}>
-                  from mission day {e.first_mission_day}
+                  day {e.first_mission_day}
                 </T>
               </Row>
             ))}
@@ -124,7 +121,7 @@ export default function SettingsScreen() {
         <T v="h2">Rule catalog</T>
         {app.catalog ? (
           <T v="small" color={C.muted}>
-            Drift levels: score {app.catalog.drift.self_care} or more = self-care, {app.catalog.drift.tell_cmo} or more = tell the CMO.
+            Drift score ≥ {app.catalog.drift.self_care}: self-care · ≥ {app.catalog.drift.tell_cmo}: tell the CMO
           </T>
         ) : null}
         {(app.catalog?.rules ?? []).map((r) => (
@@ -145,15 +142,18 @@ export default function SettingsScreen() {
                 </T>
               </Pressable>
             ) : (
-              <T v="small" color={C.faint}>
-                Source: {r.source}
-              </T>
+              <Row gap={6}>
+                <Icon name="link" size={13} color={C.faint} />
+                <T v="small" color={C.faint} style={{ flex: 1 }}>
+                  {r.source}
+                </T>
+              </Row>
             )}
           </Well>
         ))}
       </Card>
       <T v="small" color={C.faint} style={{ textAlign: 'center' }}>
-        Astro Vitals. Prototype, not a medical device. All data stays on this device.
+        Astro Vitals
       </T>
     </Screen>
   );
