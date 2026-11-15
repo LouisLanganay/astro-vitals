@@ -9,6 +9,7 @@
   import type { IconName } from '../../lib/icons';
   import { RED_FLAG_LABEL, REGION_LABEL, SYMPTOM_LABEL } from '../../lib/labels';
   import { app, navigate, refresh } from '../../lib/state.svelte';
+  import { openSymptoms } from '../../lib/symptoms';
   import Ticker from '../../lib/Ticker.svelte';
   import {
     BODY_REGIONS,
@@ -163,6 +164,7 @@
   }
 
   let token = 0;
+  let carried = $state(false);
 
   async function load(date: IsoDate | null) {
     const t = ++token;
@@ -172,6 +174,7 @@
     savedOk = false;
     try {
       const v = await getDay(date);
+      const open = await openSymptoms(v);
       if (t !== token) return;
       const a = v.check.answers;
       startText = minToTime(a?.sleep_start_min ?? 23 * 60);
@@ -189,7 +192,8 @@
         exercise_resistive_min: a?.exercise_resistive_min ?? null,
         exercise_aerobic_min: a?.exercise_aerobic_min ?? null,
       };
-      symptoms = v.check.symptoms.map((s) => ({ ...s }));
+      symptoms = open.symptoms.map((s) => ({ ...s }));
+      carried = open.carried;
       redFlags = [...v.check.red_flags];
       draft = newSymptom();
       view = v;
@@ -531,6 +535,9 @@
             'Symptoms',
             symptoms.length ? `${symptoms.length} logged` : 'None logged',
           )}
+          {#if carried && symptoms.length}
+            <p class="small muted">From the previous day. Remove a symptom that stopped.</p>
+          {/if}
           {#if symptoms.length}
             <ul class="syms">
               {#each symptoms as symptom, i (symptom)}

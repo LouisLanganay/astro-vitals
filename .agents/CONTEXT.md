@@ -30,12 +30,14 @@ All data stays on the device. Specification: [SPEC.md](./SPEC.md). Evidence: [RE
 - `crates/core/tests/`: scenario assertions.
 - `rules/rules.toml`: declarative rules. The shell embeds it with `include_str!`.
 - `app/src-tauri/src/`: `main.rs`, `store.rs` (JSON file, atomic save), `commands.rs` (10 IPC commands).
-- `app/src/lib/`: shared frontend parts: `types.ts`, `api.ts`, `errors.ts`, `labels.ts`, `format.ts`, `state.svelte.ts`, `LevelBadge.svelte`, `FiredRuleCard.svelte`.
+- `app/src/lib/`: shared frontend parts: `types.ts`, `api.ts`, `errors.ts`, `labels.ts`, `format.ts`, `state.svelte.ts`, `symptoms.ts`, `LevelBadge.svelte`, `FiredRuleCard.svelte`.
 - `app/src/App.svelte`, `app/src/app.css`: navigation shell, banners, shared CSS.
 - `app/src/screens/daily/`: Home, DailyCheck, Trends, Settings, PacketExport.
 - `app/src/screens/tests/`: Pvt, VisionTest, BodyFigure.
 - `app/src/screens/daily/DotSlider.svelte`: the 0 to 10 slider made of dots (`role="slider"`, pointer and keyboard). `FeelFace.svelte`: the dot face of "How you feel". It shows the 4 values together: mouth for mood, eyebrows for stress, eyes for tiredness, drops for workload.
 - `app/src/lib/figure.svelte.ts`: the male or female choice of the body figure, kept in `localStorage`.
+- `app/src/lib/symptoms.ts`: a day with no record starts with the symptoms of the previous day. The Body screen and the Daily check use it, because the symptom duration rule stops when the record of the day does not contain the symptom.
+- `app/src/web/start.ts`: the bridge of the web demo. It keeps the document in `localStorage`. It loads `sleep_debt` on the first visit. On a different day, it loads again a scenario that the user did not change.
 - `app/public/`: the favicon, the home screen icons, `manifest.webmanifest` and `og.png` (the share image). The logo is the dot planet. `app/src-tauri/icons/` has the same logo for the desktop.
 - `app/src/landing/`: the welcome page of the web demo. The ship has 5 zones with a panel on hover or tap (`ZONES` in `ship.ts`). At the end, the dashboard shows through an iris: a `clip-path` animation on `#app`, never a `transform` (it breaks the fixed bars). `gate.ts` decides if it shows, `run.ts` mounts it, `ship.ts` builds the dot spacecraft, `scene.ts` draws it with WebGL (no library) and flies the camera into the airlock.
 - `.agents/`: files for agents. Area guide: [CONTRACTS.md](./CONTRACTS.md) gives the meaning of each frozen contract.
