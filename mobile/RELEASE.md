@@ -13,3 +13,5 @@ The APK is not from the Play Store. It has a debug signature.
 Web demo: https://louislanganay.github.io/astro-vitals/
 
 Prototype, not a medical device.
+
+Tested with the engine tests and a release build only, not yet on a real device.
