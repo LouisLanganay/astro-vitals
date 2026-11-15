@@ -1,6 +1,7 @@
 import { mockIPC } from '@tauri-apps/api/mocks';
 
-import type { PacketExport } from '../lib/types';
+import { MISSION_DAYS, addDays } from '../lib/mission';
+import { SCENARIO_IDS, type PacketExport, type ScenarioId } from '../lib/types';
 import { ready, send } from './engine';
 import './web.css';
 
@@ -54,7 +55,7 @@ function keepCorrupt(raw: string) {
   corruptBackup = CORRUPT_LABEL;
 }
 
-async function run(command: string, args: unknown): Promise<unknown> {
+async function exec(command: string, args: unknown): Promise<unknown> {
   const doc = storedDoc();
   const response = await send({
     command,
@@ -70,6 +71,55 @@ async function run(command: string, args: unknown): Promise<unknown> {
   }
   if (response.error) throw response.error;
   return response.ok ?? null;
+}
+
+async function staleScenario(): Promise<ScenarioId | null> {
+  try {
+    const doc = storedDoc() as { settings?: { launch_date?: string } } | null;
+    const launch = doc?.settings?.launch_date;
+    if (typeof launch !== 'string') return null;
+    const loaded = addDays(launch, MISSION_DAYS);
+    if (loaded === today()) return null;
+    const stored = JSON.stringify(doc);
+    for (const id of SCENARIO_IDS) {
+      const response = await send({
+        command: 'load_scenario',
+        args: { id },
+        today: loaded,
+        doc,
+        corrupt_backup: null,
+      });
+      if (response.doc !== undefined && JSON.stringify(response.doc) === stored) return id;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function prepare() {
+  await ready();
+  if (memory === null && read(DOC_KEY) === null && read(CORRUPT_KEY) === null) {
+    await exec('load_scenario', { id: FIRST_SCENARIO });
+    return;
+  }
+  const id = await staleScenario();
+  if (id) await exec('load_scenario', { id });
+}
+
+let boot: Promise<void> | null = null;
+
+function seed(): Promise<void> {
+  boot ??= prepare().catch((e) => {
+    boot = null;
+    throw e;
+  });
+  return boot;
+}
+
+async function run(command: string, args: unknown): Promise<unknown> {
+  await seed();
+  return exec(command, args);
 }
 
 function download(name: string, json: string) {
@@ -109,9 +159,4 @@ export function showNote() {
   setTimeout(() => note.remove(), NOTE_MS + 600);
 }
 
-export async function startWeb() {
-  await ready();
-  if (memory === null && read(DOC_KEY) === null && read(CORRUPT_KEY) === null) {
-    await run('load_scenario', { id: FIRST_SCENARIO });
-  }
-}
+export const startWeb = seed;
