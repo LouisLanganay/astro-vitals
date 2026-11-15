@@ -2,19 +2,17 @@ import { router, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import type { IconName } from '../../lib/icons';
-import { useApp } from '../../lib/state';
-import { Card, Disclaimer, Icon, IconBox, Screen, T } from '../../ui/kit';
+import { Card, Icon, IconBox, Row, Screen, T } from '../../ui/kit';
 import { C, F } from '../../ui/theme';
 
 const ITEMS: { href: Href; icon: IconName; title: string; sub: string }[] = [
-  { href: '/pvt', icon: 'bolt', title: 'PVT-B reaction test', sub: '3 minutes. Tap when the stimulus shows.' },
-  { href: '/vision', icon: 'eye', title: 'Vision test', sub: 'Near acuity and Amsler grid, each eye.' },
-  { href: '/export', icon: 'export', title: 'Export packet', sub: 'A summary for the flight surgeon.' },
-  { href: '/settings', icon: 'settings', title: 'Settings', sub: 'Launch date, scenarios, rule catalog.' },
+  { href: '/pvt', icon: 'bolt', title: 'PVT-B', sub: 'Reaction test · 3 min' },
+  { href: '/vision', icon: 'eye', title: 'Vision test', sub: 'Each 7 days' },
+  { href: '/export', icon: 'export', title: 'Export packet', sub: 'For the flight surgeon' },
+  { href: '/settings', icon: 'settings', title: 'Settings', sub: 'Scenarios · rules' },
 ];
 
 export default function More() {
-  const app = useApp();
   return (
     <Screen title="More">
       <Card style={{ gap: 4, paddingVertical: 8 }}>
@@ -46,10 +44,12 @@ export default function More() {
           </Pressable>
         ))}
       </Card>
-      <T v="small" color={C.muted} style={{ textAlign: 'center' }}>
-        All data stays on this device. {app.day ? `Today: ${app.day.mission.today}.` : ''}
-      </T>
-      <Disclaimer />
+      <Row gap={6} style={{ justifyContent: 'center' }}>
+        <Icon name="lock" size={13} color={C.muted} />
+        <T v="small" color={C.muted}>
+          Data stays on this device
+        </T>
+      </Row>
     </Screen>
   );
 }

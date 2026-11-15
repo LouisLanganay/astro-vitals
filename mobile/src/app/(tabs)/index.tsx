@@ -5,14 +5,13 @@ import { Pressable, View } from 'react-native';
 import * as api from '../../lib/api';
 import { missionDayLabel } from '../../lib/format';
 import type { IconName } from '../../lib/icons';
-import { INDICATOR_INFO, REGION_LABEL } from '../../lib/labels';
+import { REGION_LABEL } from '../../lib/labels';
 import { fmt } from '../../lib/mission';
-import { ruleFact, ruleTitle } from '../../lib/rules';
 import { useApp } from '../../lib/state';
 import type { Indicator, IndicatorState, Series } from '../../lib/types';
 import { FiredRuleCard } from '../../ui/FiredRuleCard';
 import { Gauge } from '../../ui/Gauge';
-import { Btn, Card, Disclaimer, Icon, IconBox, LevelBadge, LevelIcon, Loading, Row, Screen, T } from '../../ui/kit';
+import { Btn, Card, Disclaimer, Icon, IconBox, LevelBadge, Loading, Row, Screen, T } from '../../ui/kit';
 import { Notices } from '../../ui/Notices';
 import { C, F, LEVEL_COLOR } from '../../ui/theme';
 
@@ -54,8 +53,6 @@ export default function Today() {
   const noData = a != null && a.indicators.every((i) => i.state === 'not_enough_data');
   const level: IndicatorState = noData ? 'not_enough_data' : (a?.level ?? 'not_enough_data');
   const say = noData ? 'No data yet. Do the daily check to start.' : top ? top.action : 'No rule fired. No action needed.';
-  const fact = top ? ruleFact(top) : null;
-  const why = top ? (fact ? `${ruleTitle(top)}: ${fact}.` : `${ruleTitle(top)}.`) : '';
   const shown = showAll ? fired : fired.slice(0, 3);
 
   const last = (id: Indicator) => {
@@ -71,13 +68,13 @@ export default function Today() {
   const visionDue = due('vision_test');
   const lastVision = last('acuity_right');
   const tasks: Task[] = [
-    { key: 'check', icon: 'check', status: checkDone ? 'done' : 'due', title: 'Daily check', sub: checkDone ? 'Done' : '2 min', go: '/check' },
+    { key: 'check', icon: 'check', status: checkDone ? 'done' : 'due', title: 'Daily check', sub: checkDone ? '' : '2 min', go: '/check' },
     {
       key: 'pvt',
       icon: 'bolt',
       status: day.pvt ? 'done' : 'optional',
-      title: 'PVT-B reaction test',
-      sub: day.pvt ? `${day.pvt.mean_rt_ms ?? 'no'} ms, ${day.pvt.lapses} ${day.pvt.lapses === 1 ? 'lapse' : 'lapses'}` : '3 min, optional',
+      title: 'PVT-B',
+      sub: day.pvt ? `${day.pvt.mean_rt_ms ?? '-'} ms · ${day.pvt.lapses} ${day.pvt.lapses === 1 ? 'lapse' : 'lapses'}` : '3 min',
       go: '/pvt',
     },
     {
@@ -85,7 +82,7 @@ export default function Today() {
       icon: 'eye',
       status: visionDue ? 'due' : 'done',
       title: 'Vision test',
-      sub: visionDue ? (lastVision ? `Last test: day ${lastVision.mission_day}` : 'No test yet') : lastVision ? `Next: day ${lastVision.mission_day + 7}` : 'Not due',
+      sub: visionDue ? '' : lastVision ? `Next: day ${lastVision.mission_day + 7}` : '',
       go: '/vision',
     },
   ];
@@ -96,23 +93,12 @@ export default function Today() {
     <Screen title={missionDayLabel(mission.mission_day)} eyebrow={mission.today}>
       <Notices />
       <Card>
-        <Row>
-          <IconBox color={LEVEL_COLOR[level]}>
-            <LevelIcon state={level} size={11} />
-          </IconBox>
-          <T v="h2">Today's level</T>
-        </Row>
         <View style={{ alignItems: 'center' }}>
           <Gauge state={level} width={180} />
         </View>
         <T v="h3" style={{ fontSize: 18, lineHeight: 24 }}>
           {say}
         </T>
-        {why ? (
-          <T v="small" color={C.muted}>
-            {why}
-          </T>
-        ) : null}
         {a?.level === 'flight_surgeon' ? <Btn kind="primary" label="Export the packet" icon="export" onPress={() => router.push('/export')} /> : null}
         {flaggedRegions.length ? (
           <Row gap={8}>
@@ -135,7 +121,7 @@ export default function Today() {
             <FiredRuleCard key={`${r.rule_id}-${k}`} rule={r} />
           ))}
           {fired.length > 3 ? (
-            <Btn small kind="ghost" label={showAll ? 'Show less' : `Show all ${fired.length}`} onPress={() => setShowAll((s) => !s)} />
+            <Btn small kind="ghost" icon={showAll ? 'up' : 'down'} label={showAll ? 'Less' : `+${fired.length - 3}`} onPress={() => setShowAll((s) => !s)} />
           ) : null}
         </Card>
       ) : null}
@@ -143,7 +129,7 @@ export default function Today() {
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
           <T v="h2">Due today</T>
-          <T v="label">{left ? `${left} to do` : 'All done'}</T>
+          {left ? <T v="label">{left}</T> : <Icon name="save" size={16} color={C.green} />}
         </Row>
         {tasks.map((t) => {
           const tint = t.status === 'done' ? C.green : t.status === 'due' ? C.ui : C.muted;
@@ -152,7 +138,7 @@ export default function Today() {
               key={t.key}
               onPress={() => router.push(t.go)}
               accessibilityRole="button"
-              accessibilityLabel={`${t.title}: ${t.sub}`}
+              accessibilityLabel={`${t.title}: ${t.status === 'done' ? 'done' : t.status === 'due' ? 'due' : 'optional'}${t.sub ? `, ${t.sub}` : ''}`}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.7 : 1 })}
             >
               <IconBox>
@@ -160,13 +146,14 @@ export default function Today() {
               </IconBox>
               <View style={{ flex: 1 }}>
                 <T style={{ fontFamily: F.medium }}>{t.title}</T>
-                <T v="small" color={C.muted}>
-                  {t.status === 'done' ? 'Done. ' : t.status === 'due' ? 'Due. ' : ''}
-                  {t.sub}
-                </T>
+                {t.sub ? (
+                  <T v="small" color={C.muted}>
+                    {t.sub}
+                  </T>
+                ) : null}
               </View>
               <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: t.status === 'due' ? C.fg : C.raiseB }}>
-                <Icon name="chevron" size={16} color={t.status === 'due' ? C.onFg : C.fg} />
+                <Icon name={t.status === 'done' ? 'save' : 'chevron'} size={16} color={t.status === 'due' ? C.onFg : t.status === 'done' ? C.green : C.fg} />
               </View>
             </Pressable>
           );
@@ -179,7 +166,7 @@ export default function Today() {
             {mission.streak}
           </T>
           <T v="small" color={C.muted}>
-            {mission.streak === 1 ? 'day' : 'days'} in a row with a daily check
+            {mission.streak === 1 ? 'day streak' : 'days streak'}
           </T>
         </Row>
       </Card>
@@ -198,7 +185,10 @@ export default function Today() {
               style={({ pressed }) => ({ width: '48%', flexGrow: 1, opacity: pressed ? 0.8 : 1 })}
             >
               <Card style={{ gap: 8, padding: 14, borderColor: FLAGGED.includes(st) ? LEVEL_COLOR[st] + '55' : C.cardEdge }}>
-                <T v="label">{v.name}</T>
+                <Row style={{ justifyContent: 'space-between' }}>
+                  <T v="label">{v.name}</T>
+                  <Icon name="trends" size={14} color={C.faint} />
+                </Row>
                 <Row gap={4} style={{ alignItems: 'baseline' }}>
                   {lv?.value != null ? (
                     <>
@@ -213,19 +203,17 @@ export default function Today() {
                     <T color={C.muted}>no data</T>
                   )}
                 </Row>
-                <T v="small" color={C.muted}>
-                  {lv ? `Day ${lv.mission_day}` : 'No value yet'}
-                  {base ? `, baseline ${fmt(base.median, v.decimals)}` : ''}
-                </T>
+                {base ? (
+                  <T v="small" color={C.muted}>
+                    Baseline {fmt(base.median, v.decimals)}
+                  </T>
+                ) : null}
                 {FLAGGED.includes(st) ? <LevelBadge state={st} /> : null}
               </Card>
             </Pressable>
           );
         })}
       </View>
-      <T v="small" color={C.faint}>
-        {INDICATOR_INFO.sleep_hours.label}, reaction time, mood and fluid intake: the last value. Tap a card to see the trend.
-      </T>
       <Disclaimer />
     </Screen>
   );

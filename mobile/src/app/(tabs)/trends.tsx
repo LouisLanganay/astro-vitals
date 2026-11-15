@@ -8,7 +8,7 @@ import { fmt } from '../../lib/mission';
 import { formatValue, thresholdLines } from '../../lib/rules';
 import { useApp } from '../../lib/state';
 import { INDICATORS, type Indicator, type IndicatorState, type Series } from '../../lib/types';
-import { Card, Disclaimer, LevelBadge, Loading, Row, Screen, T } from '../../ui/kit';
+import { Card, LevelBadge, Loading, Row, Screen, T } from '../../ui/kit';
 import { LineChart } from '../../ui/LineChart';
 import { C, LEVEL_COLOR } from '../../ui/theme';
 
@@ -44,7 +44,21 @@ export default function Trends() {
   const chartW = Math.min(width, 700) - 62;
 
   return (
-    <Screen title="Trends" eyebrow="Bars: daily value. Line: 7-day mean. Dashes: baseline.">
+    <Screen title="Trends">
+      <Row gap={14}>
+        <Row gap={6}>
+          <View style={{ width: 8, height: 12, borderRadius: 2, backgroundColor: C.ui, opacity: 0.45 }} />
+          <T v="small" color={C.muted}>Day</T>
+        </Row>
+        <Row gap={6}>
+          <View style={{ width: 16, height: 2.5, borderRadius: 2, backgroundColor: C.ui }} />
+          <T v="small" color={C.muted}>7-day mean</T>
+        </Row>
+        <Row gap={6}>
+          <View style={{ width: 16, borderTopWidth: 1.5, borderStyle: 'dashed', borderColor: C.muted }} />
+          <T v="small" color={C.muted}>Baseline</T>
+        </Row>
+      </Row>
       {ordered.map((s) => {
         const info = INDICATOR_INFO[s.indicator];
         const st = stateOf(s.indicator);
@@ -59,13 +73,13 @@ export default function Trends() {
               </T>
               <LevelBadge state={st} />
             </Row>
-            <Row gap={14}>
-              <T v="small" color={C.muted}>
-                Last: {lastPoint?.value != null ? formatValue(s.indicator, lastPoint.value) : 'no data'}
-              </T>
-              <T v="small" color={C.muted}>
-                Baseline: {s.baseline ? formatValue(s.indicator, s.baseline.median) : 'no baseline'}
-              </T>
+            <Row gap={8} style={{ alignItems: 'baseline' }}>
+              <T v="h2">{lastPoint?.value != null ? formatValue(s.indicator, lastPoint.value) : '-'}</T>
+              {s.baseline ? (
+                <T v="small" color={C.muted}>
+                  baseline {formatValue(s.indicator, s.baseline.median)}
+                </T>
+              ) : null}
             </Row>
             <View style={{ marginHorizontal: -4 }}>
               {lastPoint ? (
@@ -82,14 +96,13 @@ export default function Trends() {
                 />
               ) : (
                 <T v="small" color={C.muted}>
-                  No data yet.
+                  No data
                 </T>
               )}
             </View>
           </Card>
         );
       })}
-      <Disclaimer />
     </Screen>
   );
 }

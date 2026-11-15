@@ -9,7 +9,7 @@ import { INDICATOR_INFO, RED_FLAG_LABEL, REGION_LABEL, SYMPTOM_LABEL } from '../
 import { ruleTitle } from '../lib/rules';
 import { useApp } from '../lib/state';
 import { PACKET_MAX_BYTES, type AppError, type PacketExport } from '../lib/types';
-import { Banner, Btn, Card, Disclaimer, LevelBadge, Loading, Row, Screen, T, Well } from '../ui/kit';
+import { Banner, Btn, Card, Icon, LevelBadge, Loading, Row, Screen, T, Well } from '../ui/kit';
 import { C, F } from '../ui/theme';
 
 export default function Export() {
@@ -57,17 +57,17 @@ export default function Export() {
   }
 
   return (
-    <Screen back title="Export packet" eyebrow="A summary for the flight surgeon. Read it before you send it.">
+    <Screen back title="Export packet" eyebrow="For the flight surgeon">
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
           <T v="h2">Mission day {p.mission_day}</T>
           <LevelBadge state={p.level} large />
         </Row>
         <T v="small" color={C.muted}>
-          {p.date}. Size: {preview.bytes} bytes of {PACKET_MAX_BYTES} maximum.
+          {p.date} · {(preview.bytes / 1024).toFixed(1)} / {PACKET_MAX_BYTES / 1024} KB
         </T>
         <View style={{ gap: 6 }}>
-          <T v="label">Fired rules ({p.fired.length})</T>
+          <T v="label">Fired rules · {p.fired.length}</T>
           {p.fired.map((r, k) => (
             <Row key={`${r.rule_id}-${k}`} gap={8} style={{ flexWrap: 'nowrap' }}>
               <LevelBadge state={r.level} />
@@ -76,35 +76,32 @@ export default function Export() {
               </T>
             </Row>
           ))}
-          {!p.fired.length ? <T v="small" color={C.muted}>No rule fired.</T> : null}
+          {!p.fired.length ? <T v="small" color={C.muted}>None</T> : null}
         </View>
         <View style={{ gap: 4 }}>
-          <T v="label">Flagged indicators, 14 days</T>
+          <T v="label">Flagged · 14 days</T>
           {p.flagged.map((f) => (
             <T key={f.indicator} v="small">
               {INDICATOR_INFO[f.indicator].label}: <T v="small" color={C.muted} style={{ fontFamily: F.mono }}>{f.values.map((v) => (v == null ? '-' : Math.round(v * 10) / 10)).join(' ')}</T>
             </T>
           ))}
-          {!p.flagged.length ? <T v="small" color={C.muted}>None.</T> : null}
+          {!p.flagged.length ? <T v="small" color={C.muted}>None</T> : null}
         </View>
         <View style={{ gap: 4 }}>
-          <T v="label">Symptoms, 14 days ({p.symptoms.length})</T>
+          <T v="label">Symptoms · 14 days · {p.symptoms.length}</T>
           {p.symptoms.slice(-6).map((s, k) => (
             <T key={k} v="small">
-              {s.date}: {SYMPTOM_LABEL[s.symptom.kind]}, {REGION_LABEL[s.symptom.region].toLowerCase()}, severity {s.symptom.severity}
+              {s.date}: {SYMPTOM_LABEL[s.symptom.kind]}, {REGION_LABEL[s.symptom.region].toLowerCase()}, {s.symptom.severity}/3
             </T>
           ))}
-          {p.symptoms.length > 6 ? <T v="small" color={C.muted}>And {p.symptoms.length - 6} more in the file.</T> : null}
+          {p.symptoms.length > 6 ? <T v="small" color={C.muted}>+{p.symptoms.length - 6}</T> : null}
           {p.red_flags.map((r, k) => (
             <T key={`r${k}`} v="small" color={C.red}>
               {r.date}: red flag, {RED_FLAG_LABEL[r.kind].toLowerCase()}
             </T>
           ))}
         </View>
-        <T v="small" color={C.muted}>
-          Baselines: {p.baselines.length} indicators.
-        </T>
-        <Btn small kind="ghost" label={raw ? 'Hide the JSON file' : 'Show the JSON file'} onPress={() => setRaw((r) => !r)} />
+        <Btn small kind="ghost" icon={raw ? 'up' : 'down'} label="JSON" onPress={() => setRaw((r) => !r)} />
         {raw ? (
           <Well style={{ maxHeight: 320 }}>
             <ScrollView nestedScrollEnabled>
@@ -117,11 +114,13 @@ export default function Export() {
       </Card>
       {error ? <Banner tone="error" text={errorText(error)} /> : null}
       {note ? <Banner text={note} /> : null}
-      <Btn kind="primary" icon="export" label="Share the packet" onPress={share} />
-      <T v="small" color={C.faint} style={{ textAlign: 'center' }}>
-        Nothing leaves the device until you share the file.
-      </T>
-      <Disclaimer />
+      <Btn kind="primary" icon="export" label="Share" a11y="Share the packet" onPress={share} />
+      <Row gap={6} style={{ justifyContent: 'center' }}>
+        <Icon name="lock" size={13} color={C.faint} />
+        <T v="small" color={C.faint}>
+          Nothing leaves the device until you share it
+        </T>
+      </Row>
     </Screen>
   );
 }
