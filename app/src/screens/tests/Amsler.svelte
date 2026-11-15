@@ -96,7 +96,7 @@
   {#if distortion}
     <p class="small muted num" role="status">Marked cells: {count}</p>
     <div class="btns">
-      <button class="btn primary" onclick={finish}>Continue</button>
+      <button class="btn primary" onclick={finish} disabled={count === 0}>Continue</button>
       <button class="btn" onclick={() => ondone(false, [])}>No distortion</button>
     </div>
   {:else}
