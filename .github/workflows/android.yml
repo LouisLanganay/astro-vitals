@@ -2,10 +2,15 @@ name: Android
 
 on:
   push:
+    branches: ["**"]
     paths:
       - "mobile/**"
       - ".github/workflows/android.yml"
+    tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 concurrency:
   group: android-${{ github.ref }}
@@ -13,7 +18,7 @@ concurrency:
 
 jobs:
   apk:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, astro]
     timeout-minutes: 60
     defaults:
       run:
@@ -38,6 +43,8 @@ jobs:
         with:
           key: mobile-core
           cache-directories: target/mobile-core
+
+      - uses: android-actions/setup-android@v3
 
       - uses: oven-sh/setup-bun@v2
 
@@ -65,11 +72,25 @@ jobs:
         run: |
           ./gradlew assembleRelease \
             -PreactNativeArchitectures=arm64-v8a \
-            -Dorg.gradle.jvmargs=-Xmx6g \
+            -Dorg.gradle.jvmargs=-Xmx4g \
             --no-daemon
+
+      - name: Name the APK
+        run: |
+          version=$(node -p "require('./app.json').expo.version")
+          mkdir -p ../dist-apk
+          cp android/app/build/outputs/apk/release/app-release.apk "../dist-apk/astro-vitals-${version}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
           name: astro-vitals-apk
-          path: mobile/android/app/build/outputs/apk/release/*.apk
+          path: dist-apk/*.apk
           if-no-files-found: error
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-apk/*.apk
+          body_path: mobile/RELEASE.md
+          generate_release_notes: true
