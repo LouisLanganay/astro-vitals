@@ -8,7 +8,7 @@ A daily health self-check for astronauts on long missions. NASA Space Apps Chall
 
 ## Pitch
 
-On the way to Mars, a crew is alone for months and a message to Earth can take more than 20 minutes. Astro Vitals gives each astronaut a short daily check on a tablet: sleep, mood, stress, fluid, exercise, symptoms on a body figure, a reaction-time test and a vision test. A rule engine compares each value with the astronaut's own pre-flight baseline and NASA sources, and tells the astronaut what to do: self-care, tell the Crew Medical Officer, or send a packet to the flight surgeon.
+On the way to Mars, a crew is alone for months and a message to Earth can take more than 20 minutes. Astro Vitals gives each astronaut a short daily check on a tablet: sleep, mood, stress, fluid, exercise, symptoms on a body figure and a reaction-time test. A vision test comes each week. A rule engine compares each value with the astronaut's own pre-flight baseline and NASA sources, and tells the astronaut what to do: self-care, tell the Crew Medical Officer, or send a packet to the flight surgeon.
 
 ## Try a scenario
 
@@ -53,14 +53,28 @@ pnpm --dir app tauri dev
 Run the engine tests:
 
 ```sh
-cargo test --workspace
+cargo test -p astro-vitals-core -p astro-vitals-web
 ```
+
+`cargo test --workspace` also builds the desktop app. It needs the Tauri 2 system dependencies.
+
+## Android app
+
+The release [`v1.0.0`](https://github.com/LouisLanganay/astro-vitals/releases/tag/v1.0.0) has the APK: [`astro-vitals-1.0.0.apk`](https://github.com/LouisLanganay/astro-vitals/releases/download/v1.0.0/astro-vitals-1.0.0.apk).
+
+1. Download the APK on an Android phone (Android 7 or later, 64-bit ARM).
+2. Open the file. If Android asks, allow the install from this source.
+3. Open Astro Vitals. The first start loads the `sleep_debt` scenario.
+
+The app uses Expo and the same Rust engine as the web demo. The APK is not from the Play Store and has a debug signature. It is not yet tested on a real device.
 
 ## Project layout
 
 | Path | Content |
 |---|---|
 | `crates/core` | Rule engine: baseline, drift score, rules, PVT-B scoring, scenarios, packet. No I/O. |
+| `crates/web` | The engine for the browser: the WebAssembly bridge of the web demo. |
 | `app` | Tauri 2 shell and Svelte 5 interface. |
+| `mobile` | Android app: Expo, with the same engine. |
 | `rules/rules.toml` | The rules, with their sources. |
 | `.agents/` | Spec, research, sources, demo script. |
