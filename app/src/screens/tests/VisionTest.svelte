@@ -159,7 +159,7 @@
       <span>
         Amsler grid:
         {r.amsler_distortion
-          ? `distortion, ${r.amsler_cells.length} marked cells`
+          ? `distortion, ${r.amsler_cells.length} marked ${r.amsler_cells.length === 1 ? 'cell' : 'cells'}`
           : 'no distortion'}
       </span>
       {#if amslerState}<LevelBadge state={amslerState} />{/if}

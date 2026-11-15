@@ -30,7 +30,7 @@ async function start() {
   const ready = engine();
   ready.catch(() => undefined);
   const reveal = await landing();
-  const showNote = await ready;
+  const showNote = await ready.catch(() => null);
   const app = mount(App, { target: document.getElementById('app')! });
   reveal?.();
   showNote?.();
