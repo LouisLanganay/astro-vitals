@@ -327,6 +327,9 @@
             </div>
           {/each}
         </dl>
+        {#if rows(shown).some((row) => stateOf(row.indicator))}
+          <p class="small muted">The levels come from the mean of the last 7 days, not from this test only.</p>
+        {/if}
       </div>
     {/if}
   </section>
