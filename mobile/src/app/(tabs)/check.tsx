@@ -23,12 +23,12 @@ import { C, F } from '../../ui/theme';
 
 type ScaleKey = 'sleep_quality' | 'mood' | 'stress' | 'tiredness' | 'workload';
 
-const SCALES: { key: ScaleKey; label: string; icon: IconName; help: string }[] = [
-  { key: 'sleep_quality', label: 'Sleep quality', icon: 'moon', help: '0 = very bad sleep. 10 = very good sleep.' },
-  { key: 'mood', label: 'Mood', icon: 'smile', help: '0 = very bad mood. 10 = very good mood.' },
-  { key: 'stress', label: 'Stress', icon: 'wave', help: '0 = no stress. 10 = the highest stress.' },
-  { key: 'tiredness', label: 'Tiredness', icon: 'battery', help: '0 = fully awake. 10 = too tired to work.' },
-  { key: 'workload', label: 'Workload', icon: 'brief', help: '0 = no work. 10 = more work than you can do.' },
+const SCALES: { key: ScaleKey; label: string; icon: IconName }[] = [
+  { key: 'sleep_quality', label: 'Sleep quality', icon: 'moon' },
+  { key: 'mood', label: 'Mood', icon: 'smile' },
+  { key: 'stress', label: 'Stress', icon: 'wave' },
+  { key: 'tiredness', label: 'Tiredness', icon: 'battery' },
+  { key: 'workload', label: 'Workload', icon: 'brief' },
 ];
 
 const DEFAULT: DailyAnswers = {
@@ -118,10 +118,10 @@ export default function Check() {
           </T>
           <T color={C.muted}>hours of sleep</T>
         </Row>
-        <Field label="Sleep quality" help={SCALES[0].help} error={msg('answers.sleep_quality')}>
+        <Field label="Sleep quality" error={msg('answers.sleep_quality')}>
           <Scale label="Sleep quality" value={a.sleep_quality} onChange={(v) => put('sleep_quality', v)} />
         </Field>
-        <Field label="Sleep aid" help="You took a medicine to sleep." error={msg('answers.sleep_aid')} right={<Toggle label="Sleep aid" value={a.sleep_aid} onChange={(v) => put('sleep_aid', v)} />}>
+        <Field label="Sleep aid" error={msg('answers.sleep_aid')} right={<Toggle label="Sleep aid" value={a.sleep_aid} onChange={(v) => put('sleep_aid', v)} />}>
           {null}
         </Field>
       </Card>
@@ -129,7 +129,7 @@ export default function Check() {
       <Card>
         <T v="h2">How you feel</T>
         {SCALES.slice(1).map((sc) => (
-          <Field key={sc.key} label={sc.label} help={sc.help} icon={sc.icon} error={msg(`answers.${sc.key}`)}>
+          <Field key={sc.key} label={sc.label} icon={sc.icon} error={msg(`answers.${sc.key}`)}>
             <Scale label={sc.label} value={a[sc.key]} onChange={(v) => put(sc.key, v)} />
           </Field>
         ))}
@@ -137,13 +137,13 @@ export default function Check() {
 
       <Card>
         <T v="h2">Fluid and exercise</T>
-        <Field label="Fluid intake" help="The sum of all drinks of the day, in litres." icon="drop" error={msg('answers.fluid_l')}>
+        <Field label="Fluid intake" icon="drop" error={msg('answers.fluid_l')}>
           <Stepper label="Fluid intake" value={a.fluid_l} text={`${fmt(a.fluid_l, 1)} L`} steps={[0.1, 0.5]} onChange={(v) => put('fluid_l', Math.max(0, Math.round(v * 10) / 10))} />
         </Field>
-        <Field label="Resistive exercise" help="Exercise against a load. It keeps muscle and bone." icon="dumbbell" error={msg('answers.exercise_resistive_min')}>
+        <Field label="Resistive exercise" icon="dumbbell" error={msg('answers.exercise_resistive_min')}>
           <Stepper label="Resistive exercise" value={a.exercise_resistive_min} text={`${a.exercise_resistive_min} min`} steps={[5, 15]} onChange={(v) => put('exercise_resistive_min', Math.max(0, v))} />
         </Field>
-        <Field label="Aerobic exercise" help="Treadmill or cycle exercise." icon="pulse" error={msg('answers.exercise_aerobic_min')}>
+        <Field label="Aerobic exercise" icon="pulse" error={msg('answers.exercise_aerobic_min')}>
           <Stepper label="Aerobic exercise" value={a.exercise_aerobic_min} text={`${a.exercise_aerobic_min} min`} steps={[5, 15]} onChange={(v) => put('exercise_aerobic_min', Math.max(0, v))} />
         </Field>
       </Card>

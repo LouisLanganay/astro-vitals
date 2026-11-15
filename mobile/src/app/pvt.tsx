@@ -7,10 +7,8 @@ import { errorText, toAppError } from '../lib/errors';
 import { refresh, useApp } from '../lib/state';
 import {
   PVT_DURATION_MS,
-  PVT_FALSE_START_MS,
   PVT_INTERVAL_MAX_MS,
   PVT_INTERVAL_MIN_MS,
-  PVT_LAPSE_MS,
   PVT_TIMEOUT_MS,
   type AppError,
   type Indicator,
@@ -188,10 +186,10 @@ export default function Pvt() {
 
   const shown = result ?? app.day?.pvt ?? null;
   const stateOf = (i: Indicator) => app.assessment?.indicators.find((s) => s.indicator === i)?.state ?? 'not_enough_data';
-  const rows = (r: PvtResult): { i: Indicator; label: string; value: string; help: string }[] => [
-    { i: 'pvt_mean_rt_ms', label: 'Mean reaction time', value: r.mean_rt_ms === null ? 'No valid response' : `${Math.round(r.mean_rt_ms)} ms`, help: 'A lower value is better.' },
-    { i: 'pvt_lapses', label: 'Lapses', value: String(r.lapses), help: `${PVT_LAPSE_MS} ms or more, or no response in ${PVT_TIMEOUT_MS / 1000} s.` },
-    { i: 'pvt_false_starts', label: 'False starts', value: String(r.false_starts), help: `Tap before the signal, or below ${PVT_FALSE_START_MS} ms.` },
+  const rows = (r: PvtResult): { i: Indicator; label: string; value: string }[] => [
+    { i: 'pvt_mean_rt_ms', label: 'Mean reaction time', value: r.mean_rt_ms === null ? 'No valid response' : `${Math.round(r.mean_rt_ms)} ms` },
+    { i: 'pvt_lapses', label: 'Lapses', value: String(r.lapses) },
+    { i: 'pvt_false_starts', label: 'False starts', value: String(r.false_starts) },
   ];
 
   return (
@@ -226,9 +224,6 @@ export default function Pvt() {
                 <LevelBadge state={stateOf(r.i)} />
               </Row>
               <T style={{ fontFamily: F.monoMedium, fontSize: r.value.length > 8 ? 18 : 26, lineHeight: 32 }}>{r.value}</T>
-              <T v="small" color={C.faint}>
-                {r.help}
-              </T>
             </Well>
           ))}
         </Card>

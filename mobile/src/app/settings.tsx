@@ -64,7 +64,7 @@ export default function SettingsScreen() {
         <Field label="Launch date" help={`Mission day ${days} today. A date in the future makes all days pre-flight days.`} icon="calendar" error={fieldMessage(error, 'launch_date')}>
           <Stepper label="Launch date" value={0} text={draft.launch_date} steps={[1, 7]} onChange={(v) => setDraft({ ...draft, launch_date: addDays(draft.launch_date, v) })} />
         </Field>
-        <Field label="Exercise prescription" help="Minutes of exercise each day." icon="dumbbell" error={fieldMessage(error, 'exercise_prescription_min')}>
+        <Field label="Exercise prescription" icon="dumbbell" error={fieldMessage(error, 'exercise_prescription_min')}>
           <Stepper
             label="Exercise prescription"
             value={draft.exercise_prescription_min}

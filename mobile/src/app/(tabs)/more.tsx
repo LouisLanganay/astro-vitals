@@ -6,11 +6,11 @@ import { useApp } from '../../lib/state';
 import { Card, Disclaimer, Icon, IconBox, Screen, T } from '../../ui/kit';
 import { C, F } from '../../ui/theme';
 
-const ITEMS: { href: Href; icon: IconName; title: string; sub: string }[] = [
-  { href: '/pvt', icon: 'bolt', title: 'PVT-B reaction test', sub: '3 minutes. Tap when the stimulus shows.' },
-  { href: '/vision', icon: 'eye', title: 'Vision test', sub: 'Near acuity and Amsler grid, each eye.' },
-  { href: '/export', icon: 'export', title: 'Export packet', sub: 'A summary for the flight surgeon.' },
-  { href: '/settings', icon: 'settings', title: 'Settings', sub: 'Launch date, scenarios, rule catalog.' },
+const ITEMS: { href: Href; icon: IconName; title: string }[] = [
+  { href: '/pvt', icon: 'bolt', title: 'PVT-B reaction test' },
+  { href: '/vision', icon: 'eye', title: 'Vision test' },
+  { href: '/export', icon: 'export', title: 'Export packet' },
+  { href: '/settings', icon: 'settings', title: 'Settings' },
 ];
 
 export default function More() {
@@ -38,9 +38,6 @@ export default function More() {
             </IconBox>
             <View style={{ flex: 1 }}>
               <T style={{ fontFamily: F.medium }}>{it.title}</T>
-              <T v="small" color={C.muted}>
-                {it.sub}
-              </T>
             </View>
             <Icon name="chevron" size={16} color={C.muted} />
           </Pressable>

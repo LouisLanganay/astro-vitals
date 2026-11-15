@@ -74,7 +74,7 @@ export default function Body() {
   }
 
   return (
-    <Screen title="Body" eyebrow="Tap a region to see its level">
+    <Screen title="Body">
       <Card style={{ alignItems: 'center' }}>
         <Row style={{ justifyContent: 'space-between', alignSelf: 'stretch' }}>
           <Seg items={[{ key: 'front', label: 'Front' }, { key: 'back', label: 'Back' }]} value={side} onChange={setSide} />

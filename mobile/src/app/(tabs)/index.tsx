@@ -5,7 +5,7 @@ import { Pressable, View } from 'react-native';
 import * as api from '../../lib/api';
 import { missionDayLabel } from '../../lib/format';
 import type { IconName } from '../../lib/icons';
-import { INDICATOR_INFO, REGION_LABEL } from '../../lib/labels';
+import { REGION_LABEL } from '../../lib/labels';
 import { fmt } from '../../lib/mission';
 import { ruleFact, ruleTitle } from '../../lib/rules';
 import { useApp } from '../../lib/state';
@@ -77,7 +77,7 @@ export default function Today() {
       icon: 'bolt',
       status: day.pvt ? 'done' : 'optional',
       title: 'PVT-B reaction test',
-      sub: day.pvt ? `${day.pvt.mean_rt_ms ?? 'no'} ms, ${day.pvt.lapses} ${day.pvt.lapses === 1 ? 'lapse' : 'lapses'}` : '3 min, optional',
+      sub: day.pvt ? `${day.pvt.mean_rt_ms == null ? 'No valid response' : `${Math.round(day.pvt.mean_rt_ms)} ms`}, ${day.pvt.lapses} ${day.pvt.lapses === 1 ? 'lapse' : 'lapses'}` : '3 min, optional',
       go: '/pvt',
     },
     {
@@ -179,7 +179,7 @@ export default function Today() {
             {mission.streak}
           </T>
           <T v="small" color={C.muted}>
-            {mission.streak === 1 ? 'day' : 'days'} in a row with a daily check
+            {mission.streak === 1 ? 'day' : 'days'} in a row
           </T>
         </Row>
       </Card>
@@ -223,9 +223,6 @@ export default function Today() {
           );
         })}
       </View>
-      <T v="small" color={C.faint}>
-        {INDICATOR_INFO.sleep_hours.label}, reaction time, mood and fluid intake: the last value. Tap a card to see the trend.
-      </T>
       <Disclaimer />
     </Screen>
   );

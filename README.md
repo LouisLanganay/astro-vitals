@@ -60,13 +60,13 @@ cargo test -p astro-vitals-core -p astro-vitals-web
 
 ## Android app
 
-The release [`v1.0.1`](https://github.com/LouisLanganay/astro-vitals/releases/tag/v1.0.1) has the APK: [`astro-vitals-1.0.1.apk`](https://github.com/LouisLanganay/astro-vitals/releases/download/v1.0.1/astro-vitals-1.0.1.apk).
+The release [`v1.0.2`](https://github.com/LouisLanganay/astro-vitals/releases/tag/v1.0.2) has the APK: [`astro-vitals-1.0.2.apk`](https://github.com/LouisLanganay/astro-vitals/releases/download/v1.0.2/astro-vitals-1.0.2.apk).
 
 1. Download the APK on an Android phone (Android 7 or later, 64-bit ARM).
 2. Open the file. If Android asks, allow the install from this source.
 3. Open Astro Vitals. The first start loads the `sleep_debt` scenario.
 
-The app uses Expo and the same Rust engine as the web demo. The APK is not from the Play Store and has a debug signature. It is not yet tested on a real device.
+The app uses Expo and the same Rust engine as the web demo. The APK is not from the Play Store and has a debug signature. Tested on one Android phone.
 
 ## Project layout
 
