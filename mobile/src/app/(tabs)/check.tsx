@@ -175,7 +175,7 @@ export default function Check() {
           <T v="h2">Red flags</T>
         </Row>
         <T v="small" color={C.muted}>
-          Only if you have it now.
+          Only if you have it now. A red flag sets the level to "Flight surgeon".
         </T>
         {RED_FLAG_KINDS.map((k) => {
           const on = flags.includes(k);

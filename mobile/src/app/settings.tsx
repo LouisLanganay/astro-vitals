@@ -89,7 +89,7 @@ export default function SettingsScreen() {
             {confirm === id ? (
               <View style={{ gap: 8 }}>
                 <T v="small" color={C.orange}>
-                  This replaces all your data on this device.
+                  This deletes all your data on this device. Continue?
                 </T>
                 <Row>
                   <Btn small kind="danger" label={busy ? 'Loading...' : 'Replace'} onPress={() => load(id)} disabled={busy} />

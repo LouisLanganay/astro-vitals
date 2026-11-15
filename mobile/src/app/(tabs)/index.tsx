@@ -74,7 +74,7 @@ export default function Today() {
       icon: 'bolt',
       status: day.pvt ? 'done' : 'optional',
       title: 'PVT-B',
-      sub: day.pvt ? `${day.pvt.mean_rt_ms ?? '-'} ms · ${day.pvt.lapses} ${day.pvt.lapses === 1 ? 'lapse' : 'lapses'}` : '3 min',
+      sub: day.pvt ? `${day.pvt.mean_rt_ms == null ? 'No valid response' : `${Math.round(day.pvt.mean_rt_ms)} ms`} · ${day.pvt.lapses} ${day.pvt.lapses === 1 ? 'lapse' : 'lapses'}` : '3 min',
       go: '/pvt',
     },
     {
