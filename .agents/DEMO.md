@@ -18,7 +18,7 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 
 1. Open "Today".
 2. Expected: mission day 120, level "Tell the CMO" with color, icon and text.
-3. Expected: "Due today" lists the daily check, the vision test and the PVT-B (optional).
+3. Expected: "Due today" lists the daily check and the PVT-B (optional). The vision test is not due: the last test is on day 119, and the next test shows as "Day 126".
 4. Expected: each fired rule shows its action, its explanation and its source URL.
 
 ## Body

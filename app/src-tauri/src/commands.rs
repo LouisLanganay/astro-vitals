@@ -63,7 +63,8 @@ impl AppState {
 
     fn save_daily_check(&self, check: DailyCheck, today: NaiveDate) -> Result<(), AppError> {
         self.rules()?;
-        validate::daily_check(&check, today)?;
+        let launch = self.store().doc().settings.launch_date;
+        validate::daily_check(&check, launch, today)?;
         self.update(|doc| {
             doc.checks.insert(check.date, check);
         })
@@ -71,7 +72,8 @@ impl AppState {
 
     fn save_pvt(&self, input: PvtInput, today: NaiveDate) -> Result<PvtResult, AppError> {
         self.rules()?;
-        validate::pvt_input(&input, today)?;
+        let launch = self.store().doc().settings.launch_date;
+        validate::pvt_input(&input, launch, today)?;
         let result = pvt::score(&input);
         self.update(|doc| {
             doc.pvt.insert(result.date, result.clone());
@@ -81,8 +83,13 @@ impl AppState {
 
     fn save_vision_test(&self, result: VisionResult, today: NaiveDate) -> Result<(), AppError> {
         self.rules()?;
-        let calibration = self.store().doc().settings.calibration;
-        validate::vision_result(&result, calibration.as_ref(), today)?;
+        let settings = self.store().doc().settings.clone();
+        validate::vision_result(
+            &result,
+            settings.calibration.as_ref(),
+            settings.launch_date,
+            today,
+        )?;
         self.update(|doc| {
             doc.vision.insert(result.date, result);
         })

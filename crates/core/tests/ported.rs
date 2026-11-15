@@ -478,7 +478,7 @@ fn validation_names_each_field_out_of_range() {
     a.sleep_start_min = 1440;
     a.sleep_end_min = 2000;
     assert_eq!(
-        fields(validate::daily_check(&c, today)),
+        fields(validate::daily_check(&c, launch(), today)),
         ["answers.sleep_start_min", "answers.sleep_end_min"]
     );
 
@@ -489,7 +489,7 @@ fn validation_names_each_field_out_of_range() {
     a.fluid_l = -0.5;
     a.exercise_aerobic_min = 1441;
     assert_eq!(
-        fields(validate::daily_check(&c, today)),
+        fields(validate::daily_check(&c, launch(), today)),
         [
             "answers.mood",
             "answers.workload",
@@ -501,7 +501,7 @@ fn validation_names_each_field_out_of_range() {
     let mut c = check(4);
     c.answers.as_mut().unwrap().fluid_l = f64::INFINITY;
     assert_eq!(
-        fields(validate::daily_check(&c, today)),
+        fields(validate::daily_check(&c, launch(), today)),
         ["answers.fluid_l"]
     );
 
@@ -519,7 +519,7 @@ fn validation_names_each_field_out_of_range() {
         ..headache
     });
     assert_eq!(
-        fields(validate::daily_check(&c, today)),
+        fields(validate::daily_check(&c, launch(), today)),
         ["symptoms[1].severity"]
     );
 
@@ -528,7 +528,7 @@ fn validation_names_each_field_out_of_range() {
         date: day(1),
         trials: vec![response(250.0), response(30_000.0), response(0.0)],
     };
-    assert_eq!(validate::pvt_input(&good, today), Ok(()));
+    assert_eq!(validate::pvt_input(&good, launch(), today), Ok(()));
     let bad = PvtInput {
         date: day(1),
         trials: vec![
@@ -539,7 +539,7 @@ fn validation_names_each_field_out_of_range() {
         ],
     };
     assert_eq!(
-        fields(validate::pvt_input(&bad, today)),
+        fields(validate::pvt_input(&bad, launch(), today)),
         ["trials[1].rt_ms", "trials[2].rt_ms", "trials[3].rt_ms"]
     );
 
@@ -558,7 +558,7 @@ fn validation_names_each_field_out_of_range() {
         right: with_cells(1.6, &[(0, 19), (19, 0)]),
     };
     assert_eq!(
-        validate::vision_result(&good, Some(&calibration), today),
+        validate::vision_result(&good, Some(&calibration), launch(), today),
         Ok(())
     );
     let bad = VisionResult {
@@ -567,7 +567,12 @@ fn validation_names_each_field_out_of_range() {
         right: with_cells(f64::NAN, &[(20, 0)]),
     };
     assert_eq!(
-        fields(validate::vision_result(&bad, Some(&calibration), today)),
+        fields(validate::vision_result(
+            &bad,
+            Some(&calibration),
+            launch(),
+            today
+        )),
         [
             "left.acuity_logmar",
             "right.acuity_logmar",

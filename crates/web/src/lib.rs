@@ -104,7 +104,7 @@ impl Session {
             }
             "save_daily_check" => {
                 let check: DailyCheck = arg(args, "check")?;
-                validate::daily_check(&check, today)?;
+                validate::daily_check(&check, self.doc.settings.launch_date, today)?;
                 let mut doc = self.doc.clone();
                 doc.checks.insert(check.date, check);
                 self.replace(doc);
@@ -112,7 +112,7 @@ impl Session {
             }
             "save_pvt" => {
                 let input: PvtInput = arg(args, "input")?;
-                validate::pvt_input(&input, today)?;
+                validate::pvt_input(&input, self.doc.settings.launch_date, today)?;
                 let result = pvt::score(&input);
                 let mut doc = self.doc.clone();
                 doc.pvt.insert(result.date, result.clone());
@@ -121,7 +121,12 @@ impl Session {
             }
             "save_vision_test" => {
                 let result: VisionResult = arg(args, "result")?;
-                validate::vision_result(&result, self.doc.settings.calibration.as_ref(), today)?;
+                validate::vision_result(
+                    &result,
+                    self.doc.settings.calibration.as_ref(),
+                    self.doc.settings.launch_date,
+                    today,
+                )?;
                 let mut doc = self.doc.clone();
                 doc.vision.insert(result.date, result);
                 self.replace(doc);
