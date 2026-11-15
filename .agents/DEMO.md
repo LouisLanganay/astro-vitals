@@ -26,6 +26,7 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 1. Open "Body".
 2. Select the head. Expected: the headache symptom, the indicators of the head and the fired rules.
 3. Log one symptom from a region. Expected: the symptom shows in the region after the save.
+4. Select "Female" in the figure card. Expected: the figure changes. The Today screen shows the same figure, and the choice stays after a restart.
 
 ## Trends
 
@@ -34,7 +35,7 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 
 ## Daily check
 
-1. Open "Daily check". Move each slider. Enter fluid and exercise. Select "Save".
+1. Open "Daily check". Move each slider. Expected: the face in "How you feel" changes with each slider. Enter fluid and exercise. Select "Save".
 2. Expected: the Today screen shows the daily check as done in "Due today". The streak increases by 1.
 3. Enter a fluid value of 16 (the limit is 15 L). Expected: the error shows at the fluid field.
 
@@ -63,6 +64,7 @@ Time: about 8 minutes. The PVT-B takes 3 of them.
 
 ## Web demo
 
-1. Open https://louislanganay.github.io/astro-vitals/. Select "Enter the ship". The `sleep_debt` scenario loads on the first visit. Add `#app` to the URL to skip the intro.
+1. Open https://louislanganay.github.io/astro-vitals/. Move the pointer on the ship (or tap a part on a phone). Expected: a panel shows for each part. Select "Enter the ship", or the airlock. The `sleep_debt` scenario loads on the first visit. Add `#app` to the URL to skip the intro.
 2. Do the steps above from "Today screen". The data stays in the browser storage.
 3. In "Export", the export button downloads the JSON file. There is no path dialog.
+4. On a phone or a tablet, the browser shows the interface 15% larger. The vision test asks for a new calibration one time after this change.

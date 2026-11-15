@@ -1,7 +1,10 @@
-import { CENTER, NOSE_Z, STRIDE, TUNNEL_END_Z, buildCloud, type Cloud, type Vec3 } from './ship';
+import { CENTER, NOSE_Z, STRIDE, TUNNEL_END_Z, ZONES, buildCloud, type Cloud, type Vec3 } from './ship';
 
 export interface Scene {
   refit(): void;
+  pick(x: number, y: number): number;
+  focus(zone: number): void;
+  hole(radius: number): void;
   enter(): Promise<void>;
   skip(): void;
   destroy(): void;
@@ -11,6 +14,7 @@ export interface SceneOptions {
   reduced: boolean;
   frame?: (wide: boolean) => number[] | null;
   onanchor?: (x: number, y: number, alpha: number) => void;
+  onzone?: (x: number, y: number) => void;
 }
 
 interface Shot {
@@ -27,6 +31,9 @@ interface Shot {
   open: number;
   inside: number;
   reveal: number;
+  zone: number;
+  glow: number;
+  hole: number;
 }
 
 interface Painter {
@@ -43,7 +50,8 @@ const FOV_INSIDE = 1.16;
 const LIGHT: Vec3 = normalize([-0.52, 0.66, 0.54]);
 const SWING = 1.35;
 const DIVE = 1.45;
-const COVER_LEAD = 0.34;
+const ARRIVE_LEAD = 0.1;
+const DRIFT = 1.7;
 const DIVE_FROM = NOSE_Z + 4.2;
 const DIVE_TO = TUNNEL_END_Z + 2.6;
 const LOOK_AHEAD = 4.2;
@@ -90,6 +98,10 @@ uniform float uReveal;
 uniform float uScale;
 uniform float uMinPx;
 uniform float uMaxPx;
+uniform float uZone;
+uniform float uGlow;
+uniform float uHole;
+uniform float uAspect;
 varying float vAlpha;
 varying float vLit;
 varying float vAccent;
@@ -102,6 +114,7 @@ void main() {
   float alpha = 1.0;
   float lit = 1.0;
   float px = 1.0;
+  float hot = (1.0 - step(0.5, abs(aA.w - uZone))) * uGlow;
   vec4 mv;
 
   if (aB.x > 0.5) {
@@ -159,8 +172,9 @@ void main() {
       alpha *= 0.72 + 0.28 * sin(uTime * 1.4 + aA.y * 6.2832);
       lit = 1.0;
     }
-    alpha *= smoothstep(0.08, 0.8, depth);
-    px = aA.x * grow * (0.78 + 0.34 * lit) * uScale / depth;
+    alpha *= smoothstep(0.08, 0.8, depth) * (1.0 + 0.5 * hot);
+    lit = mix(lit, 1.0, 0.45 * hot);
+    px = aA.x * grow * (0.78 + 0.34 * lit) * (1.0 + 0.16 * hot) * uScale / depth;
   }
 
   float ratio = min(1.0, px / uMinPx);
@@ -174,8 +188,15 @@ void main() {
   }
   gl_Position.xy += uShift * gl_Position.w;
   vAlpha = alpha * ratio * ratio;
+  if (uHole > 0.0 && gl_Position.w > 0.0) {
+    vec2 q = gl_Position.xy / gl_Position.w * vec2(uAspect, 1.0);
+    float rim = length(q) - uHole;
+    q += normalize(q + 0.00001) * exp(-max(rim, 0.0) * 5.0) * 0.1 * step(0.0, rim);
+    vAlpha *= 1.0 + 1.8 * exp(-abs(rim) * 9.0);
+    gl_Position.xy = q / vec2(uAspect, 1.0) * gl_Position.w;
+  }
   vLit = lit;
-  vAccent = step(0.5, accent);
+  vAccent = max(step(0.5, accent), 0.62 * hot);
 }
 `;
 
@@ -290,7 +311,7 @@ function glPainter(canvas: HTMLCanvasElement, cloud: Cloud): Painter | null {
   const colours = palette();
   const names = [
     'uView', 'uProj', 'uEye', 'uLight', 'uShift', 'uTime', 'uSpin', 'uOpen', 'uInside',
-    'uReveal', 'uScale', 'uMinPx', 'uMaxPx', 'uLo', 'uHi', 'uAcc',
+    'uReveal', 'uScale', 'uMinPx', 'uMaxPx', 'uLo', 'uHi', 'uAcc', 'uZone', 'uGlow', 'uHole', 'uAspect',
   ];
   let dots: WebGLProgram | null = null;
   let solid: WebGLProgram | null = null;
@@ -400,6 +421,10 @@ function glPainter(canvas: HTMLCanvasElement, cloud: Cloud): Painter | null {
       gl.uniform1f(uniforms.uScale, (height * ratio * shot.focal) / 2);
       gl.uniform1f(uniforms.uMinPx, 1.7 * ratio);
       gl.uniform1f(uniforms.uMaxPx, maxPoint);
+      gl.uniform1f(uniforms.uZone, shot.zone);
+      gl.uniform1f(uniforms.uGlow, shot.glow);
+      gl.uniform1f(uniforms.uHole, shot.hole);
+      gl.uniform1f(uniforms.uAspect, shot.aspect);
       gl.colorMask(true, true, true, true);
       gl.depthMask(false);
       gl.enable(gl.BLEND);
@@ -532,6 +557,39 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
   let aimX = 0;
   let aimY = 0;
   let stopped = false;
+  let zone = 0;
+  let lit = -1;
+  let glow = 0;
+  let hole = 0;
+  let cam = { focal: 1, aspect: 1, shiftX: 0, shiftY: 0 };
+
+  function project(p: Vec3) {
+    const depth = -(view[2] * p[0] + view[6] * p[1] + view[10] * p[2] + view[14]);
+    const nx = ((cam.focal / cam.aspect) * (view[0] * p[0] + view[4] * p[1] + view[8] * p[2] + view[12])) / depth;
+    const ny = (cam.focal * (view[1] * p[0] + view[5] * p[1] + view[9] * p[2] + view[13])) / depth;
+    return {
+      x: (nx + cam.shiftX + 1) * 0.5 * width,
+      y: (1 - ny - cam.shiftY) * 0.5 * height,
+      unit: depth > 0 ? ((height / 2) * cam.focal) / depth : 0,
+    };
+  }
+
+  function pick(x: number, y: number) {
+    let best = 1;
+    let found = 0;
+    ZONES.forEach((z, index) => {
+      for (const sample of z.samples) {
+        const p = project(sample);
+        if (p.unit <= 0) continue;
+        const score = Math.hypot(p.x - x, p.y - y) / (z.radius * p.unit);
+        if (score < best) {
+          best = score;
+          found = index + 1;
+        }
+      }
+    });
+    return found;
+  }
 
   function bounds(dist: number, focal: number, aspect: number) {
     lookAt(probe, orbit(base.az, base.el, dist), CENTER, base.roll);
@@ -602,11 +660,12 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
       open = easeInOut(clamp((e - 0.7) / 0.85));
       if (e > SWING) {
         const u = clamp((e - SWING) / DIVE);
-        const z = lerp(DIVE_FROM, DIVE_TO, u * u * u);
+        const after = Math.max(0, e - SWING - DIVE);
+        const z = lerp(DIVE_FROM, DIVE_TO, u * u * u) - DRIFT * (1 - Math.exp(-after * 2.4));
         eye = [0, 0, z];
         target = [0, 0, z - LOOK_AHEAD];
         fov = lerp(FOV, FOV_INSIDE, u * u);
-        roll = easeInOut(u) * 0.7;
+        roll = easeInOut(u) * 0.7 + after * 0.35;
         inside = smooth(NOSE_Z + 1.2, NOSE_Z - 0.6, z);
       }
     } else {
@@ -618,6 +677,14 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
     const near = Math.max(0.05, reach - 8.5);
     lookAt(view, eye, target, roll);
     perspective(proj, focal, aspect, near, reach + 14);
+
+    cam = { focal, aspect, shiftX: base.shiftX * fade, shiftY: base.shiftY * fade };
+    if (entered >= 0) zone = 0;
+    if (zone > 0) lit = ZONES[zone - 1].id;
+    if (zone > 0 && options.onzone) {
+      const p = project(ZONES[zone - 1].anchor);
+      options.onzone(p.x, p.y);
+    }
 
     if (options.onanchor) {
       const vz = view[10] * NOSE_Z + view[14];
@@ -641,6 +708,9 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
       open,
       inside,
       reveal: animated ? clamp((t - 0.1) / 1.9) : 1,
+      zone: lit,
+      glow,
+      hole: hole / (height / 2),
     };
   }
 
@@ -655,14 +725,14 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
     last = now;
     pointerX += (aimX - pointerX) * 0.045;
     pointerY += (aimY - pointerY) * 0.045;
+    glow += ((zone > 0 ? 1 : 0) - glow) * 0.16;
     paint();
     if (entered >= 0) {
       const e = clock - entered;
-      if (covered && e >= SWING + DIVE - COVER_LEAD) {
+      if (covered && e >= SWING + DIVE - ARRIVE_LEAD) {
         covered();
         covered = null;
       }
-      if (e >= SWING + DIVE + 0.6) return;
     }
     raf = requestAnimationFrame(tick);
   }
@@ -701,6 +771,19 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
   run();
 
   return {
+    pick(x, y) {
+      return entered >= 0 ? 0 : pick(x, y);
+    },
+    hole(radius) {
+      hole = radius;
+    },
+    focus(next) {
+      zone = next;
+      if (!animated) {
+        glow = next > 0 ? 1 : 0;
+        paint();
+      }
+    },
     refit() {
       fit();
       if (!animated) paint();
@@ -714,7 +797,7 @@ export function createScene(canvas: HTMLCanvasElement, options: SceneOptions): S
     },
     skip() {
       if (entered < 0 || !covered) return;
-      entered = clock - (SWING + DIVE - COVER_LEAD);
+      entered = clock - (SWING + DIVE - ARRIVE_LEAD);
     },
     destroy() {
       stopped = true;

@@ -34,7 +34,10 @@ All data stays on the device. Specification: [SPEC.md](./SPEC.md). Evidence: [RE
 - `app/src/App.svelte`, `app/src/app.css`: navigation shell, banners, shared CSS.
 - `app/src/screens/daily/`: Home, DailyCheck, Trends, Settings, PacketExport.
 - `app/src/screens/tests/`: Pvt, VisionTest, BodyFigure.
-- `app/src/landing/`: the welcome page of the web demo. `gate.ts` decides if it shows, `run.ts` mounts it, `ship.ts` builds the dot spacecraft, `scene.ts` draws it with WebGL (no library) and flies the camera into the airlock.
+- `app/src/screens/daily/DotSlider.svelte`: the 0 to 10 slider made of dots (`role="slider"`, pointer and keyboard). `FeelFace.svelte`: the dot face of "How you feel". It shows the 4 values together: mouth for mood, eyebrows for stress, eyes for tiredness, drops for workload.
+- `app/src/lib/figure.svelte.ts`: the male or female choice of the body figure, kept in `localStorage`.
+- `app/public/`: the favicon, the home screen icons, `manifest.webmanifest` and `og.png` (the share image). The logo is the dot planet. `app/src-tauri/icons/` has the same logo for the desktop.
+- `app/src/landing/`: the welcome page of the web demo. The ship has 5 zones with a panel on hover or tap (`ZONES` in `ship.ts`). At the end, the dashboard shows through an iris: a `clip-path` animation on `#app`, never a `transform` (it breaks the fixed bars). `gate.ts` decides if it shows, `run.ts` mounts it, `ship.ts` builds the dot spacecraft, `scene.ts` draws it with WebGL (no library) and flies the camera into the airlock.
 - `.agents/`: files for agents. Area guide: [CONTRACTS.md](./CONTRACTS.md) gives the meaning of each frozen contract.
 - `.agents/fleet/SETUP.md`: setup of `/fleet` sessions.
 
@@ -61,6 +64,8 @@ All data stays on the device. Specification: [SPEC.md](./SPEC.md). Evidence: [RE
 - Vision rules compare with the latest pre-flight test. `vision_change` uses the last test, `vision_persistent` the last 2 tests.
 - A scenario has data for mission days -14 to 119. Mission day 120 (today) has no data.
 - Core tests: `crates/core/tests/scenarios.rs` (SPEC Verification, rule content) and `edge_cases.rs` (SPEC Edge cases).
+- Sections have no box: the last block of `app.css` removes the card background and adds a thin line and a small title in capitals. Do not add a box around a section again.
+- CI and Pages run on one self-hosted runner, the Mac of Louis. When it is offline, no check and no deployment run: do the checks by hand before a merge.
 - Touch screens: `app/index.html` sets `initial-scale=1.15` with no `width`. A phone or a tablet browser then shows all the interface 15% larger. A desktop browser and the Tauri window ignore it.
 - The vision calibration is in CSS pixels. `app/src/lib/scale.ts` keeps the page scale of the calibration in `localStorage`. A calibration made at another scale is not used: the screen asks for a new one.
 - Manual demo: [DEMO.md](./DEMO.md).
