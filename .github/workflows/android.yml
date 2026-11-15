@@ -45,6 +45,8 @@ jobs:
           cache-directories: target/mobile-core
 
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - uses: oven-sh/setup-bun@v2
 
