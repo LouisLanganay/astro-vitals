@@ -60,7 +60,7 @@ cargo test -p astro-vitals-core -p astro-vitals-web
 
 ## Android app
 
-The release [`v1.0.0`](https://github.com/LouisLanganay/astro-vitals/releases/tag/v1.0.0) has the APK: [`astro-vitals-1.0.0.apk`](https://github.com/LouisLanganay/astro-vitals/releases/download/v1.0.0/astro-vitals-1.0.0.apk).
+The release [`v1.0.1`](https://github.com/LouisLanganay/astro-vitals/releases/tag/v1.0.1) has the APK: [`astro-vitals-1.0.1.apk`](https://github.com/LouisLanganay/astro-vitals/releases/download/v1.0.1/astro-vitals-1.0.1.apk).
 
 1. Download the APK on an Android phone (Android 7 or later, 64-bit ARM).
 2. Open the file. If Android asks, allow the install from this source.

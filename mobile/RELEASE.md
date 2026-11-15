@@ -4,7 +4,7 @@ The app is a daily health self-check for one astronaut on a Mars transit. The Ru
 
 ## Install
 
-1. Download `astro-vitals-1.0.0.apk` below on an Android phone (Android 7 or later, 64-bit ARM).
+1. Download `astro-vitals-1.0.1.apk` below on an Android phone (Android 7 or later, 64-bit ARM).
 2. Open the file. If Android asks, allow the install from this source.
 3. Open Astro Vitals. The first start loads the `sleep_debt` demo mission.
 
