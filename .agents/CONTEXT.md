@@ -73,3 +73,15 @@ All data stays on the device. Specification: [SPEC.md](./SPEC.md). Evidence: [RE
 - Manual demo: [DEMO.md](./DEMO.md).
 - Do not add a dependency without an agreement: `Cargo.lock` and `app/pnpm-lock.yaml` are shared.
 - Commit messages: `chore: ...`, `docs: ...`, `feat: ...`, `fix: ...`.
+
+## Mobile app
+
+- `mobile/`: Expo SDK 58, expo-router (routes in `mobile/src/app/`), TypeScript strict, bun. Android first. `mobile/android` and `mobile/ios` are prebuild output and are not in git.
+- The engine is the real Rust core. `mobile/scripts/build-core.sh` builds `crates/web` to `wasm32-unknown-unknown` (target dir `target/mobile-core`, size profile), lowers the new wasm features with `wasm-opt`, and converts the module to JavaScript with Binaryen `wasm2js`. Output: `mobile/src/core/engine.generated.js` (committed, so `expo start` works without Rust).
+- Hermes has no WebAssembly. `wasm2js` cannot return an i64, so the app calls `call_ptr(ptr, len)` and `call_len()` in `crates/web`, not `call`.
+- `mobile/src/core/session.ts` is the port of `app/src/web/start.ts`: same request, same document, same corrupt document behaviour. `storage.ts` keeps `data.json` in the document directory (write a temp file, then move). `storage.web.ts` uses `localStorage`.
+- `mobile/src/lib/types.ts`, `labels.ts`, `errors.ts`, `format.ts`, `icons.ts` are copies of the files in `app/src/lib/`. `bodyShape.ts` is a copy of `app/src/screens/tests/bodyShape.ts` with the dot points added.
+- Commands in `mobile/`: `bun install --frozen-lockfile`, `bun run core` (needs Rust with the wasm32 target), `bun test` (compares `engine.generated.js` with the real `.wasm`), `bunx tsc --noEmit`, `bunx expo export -p web`.
+- The Expo CLI needs Node 22.13 or later. With an older Node, use `bun --bun x expo ...`.
+- CI: `.github/workflows/android.yml` builds a release APK (arm64-v8a, debug signing) on a push that changes `mobile/**`. Artifact: `astro-vitals-apk`.
+- The vision test is not in the mobile app.

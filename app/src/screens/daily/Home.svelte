@@ -120,7 +120,7 @@
         status: pvt ? 'done' : 'optional',
         title: 'PVT-B reaction test',
         sub: pvt
-          ? `${pvt.mean_rt_ms ?? 'no'} ms, ${pvt.lapses} ${pvt.lapses === 1 ? 'lapse' : 'lapses'}`
+          ? `${pvt.mean_rt_ms == null ? 'No valid response' : `${Math.round(pvt.mean_rt_ms)} ms`}, ${pvt.lapses} ${pvt.lapses === 1 ? 'lapse' : 'lapses'}`
           : '3 min',
         meta: pvt ? null : 'clock',
         label: pvt ? 'Repeat' : 'Start',

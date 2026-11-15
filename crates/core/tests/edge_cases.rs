@@ -291,9 +291,9 @@ fn sleep_through_midnight_has_the_correct_duration() {
 #[test]
 fn validation_rejects_input_out_of_range_and_names_the_field() {
     let today = day(10);
-    assert_eq!(validate::daily_check(&check(10), today), Ok(()));
+    assert_eq!(validate::daily_check(&check(10), launch(), today), Ok(()));
     assert_eq!(
-        validate::daily_check(&DailyCheck::empty(day(10)), today),
+        validate::daily_check(&DailyCheck::empty(day(10)), launch(), today),
         Ok(())
     );
 
@@ -307,7 +307,7 @@ fn validation_rejects_input_out_of_range_and_names_the_field() {
         severity: 4,
         ..rash(false, None)
     });
-    let error = validate::daily_check(&bad, today).unwrap_err();
+    let error = validate::daily_check(&bad, launch(), today).unwrap_err();
     assert_eq!(
         error.to_string(),
         "date: must not be after today; answers.sleep_start_min: must be 0 to 1439; \
@@ -317,7 +317,7 @@ fn validation_rejects_input_out_of_range_and_names_the_field() {
     let mut zero = check(10);
     zero.answers.as_mut().unwrap().sleep_end_min = 1380;
     assert_eq!(
-        fields(validate::daily_check(&zero, today)),
+        fields(validate::daily_check(&zero, launch(), today)),
         ["answers.sleep_end_min"]
     );
     let mut two = check(10);
@@ -326,7 +326,7 @@ fn validation_rejects_input_out_of_range_and_names_the_field() {
         region: BodyRegion::Legs,
         ..rash(false, None)
     });
-    assert_eq!(validate::daily_check(&two, today), Ok(()));
+    assert_eq!(validate::daily_check(&two, launch(), today), Ok(()));
     let mut d = doc();
     d.checks.insert(day(10), two);
     let a = at(&d, 10);
@@ -338,7 +338,7 @@ fn validation_rejects_input_out_of_range_and_names_the_field() {
     let mut nan = check(10);
     nan.answers.as_mut().unwrap().fluid_l = f64::NAN;
     assert_eq!(
-        fields(validate::daily_check(&nan, today)),
+        fields(validate::daily_check(&nan, launch(), today)),
         ["answers.fluid_l"]
     );
 
@@ -352,14 +352,17 @@ fn validation_rejects_input_out_of_range_and_names_the_field() {
         trials,
     };
     assert_eq!(
-        fields(validate::pvt_input(&input, today)),
+        fields(validate::pvt_input(&input, launch(), today)),
         ["date", "trials[2].rt_ms"]
     );
     let empty = PvtInput {
         date: day(10),
         trials: Vec::new(),
     };
-    assert_eq!(fields(validate::pvt_input(&empty, today)), ["trials"]);
+    assert_eq!(
+        fields(validate::pvt_input(&empty, launch(), today)),
+        ["trials"]
+    );
 
     let calibration = Calibration { px_per_mm: 4.0 };
     let mut result = VisionResult {
@@ -368,11 +371,11 @@ fn validation_rejects_input_out_of_range_and_names_the_field() {
         right: eye(0.0, false),
     };
     assert_eq!(
-        validate::vision_result(&result, Some(&calibration), today),
+        validate::vision_result(&result, Some(&calibration), launch(), today),
         Ok(())
     );
     assert_eq!(
-        fields(validate::vision_result(&result, None, today)),
+        fields(validate::vision_result(&result, None, launch(), today)),
         ["calibration"]
     );
     result.left.acuity_logmar = 9.0;
@@ -381,7 +384,12 @@ fn validation_rejects_input_out_of_range_and_names_the_field() {
         AmslerCell { row: 20, col: 0 },
     ];
     assert_eq!(
-        fields(validate::vision_result(&result, Some(&calibration), today)),
+        fields(validate::vision_result(
+            &result,
+            Some(&calibration),
+            launch(),
+            today
+        )),
         ["left.acuity_logmar", "right.amsler_cells[1]"]
     );
 

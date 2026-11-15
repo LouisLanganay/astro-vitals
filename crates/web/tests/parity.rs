@@ -418,7 +418,11 @@ fn save_daily_check_saves_or_gives_the_validation_error() {
         },
     ] {
         let response = send("save_daily_check", json!({ "check": bad }), &value(&start));
-        let core = validation(validate::daily_check(&bad, today()));
+        let core = validation(validate::daily_check(
+            &bad,
+            start.settings.launch_date,
+            today(),
+        ));
         assert_eq!(error_of(&response), &core);
     }
 }
@@ -443,7 +447,11 @@ fn save_pvt_saves_or_gives_the_validation_error() {
         },
     ] {
         let response = send("save_pvt", json!({ "input": bad }), &value(&start));
-        let core = validation(validate::pvt_input(&bad, today()));
+        let core = validation(validate::pvt_input(
+            &bad,
+            start.settings.launch_date,
+            today(),
+        ));
         assert_eq!(error_of(&response), &core);
     }
 }
@@ -468,6 +476,7 @@ fn save_vision_test_saves_or_gives_the_validation_error() {
     let core = validation(validate::vision_result(
         &bad,
         start.settings.calibration.as_ref(),
+        start.settings.launch_date,
         today(),
     ));
     assert_eq!(error_of(&response), &core);
@@ -478,7 +487,12 @@ fn save_vision_test_saves_or_gives_the_validation_error() {
         json!({ "result": result }),
         &value(&uncalibrated),
     );
-    let core = validation(validate::vision_result(&result, None, today()));
+    let core = validation(validate::vision_result(
+        &result,
+        None,
+        uncalibrated.settings.launch_date,
+        today(),
+    ));
     assert_eq!(error_of(&response), &core);
 }
 

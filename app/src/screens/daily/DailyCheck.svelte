@@ -8,10 +8,12 @@
   import Icon from '../../lib/Icon.svelte';
   import type { IconName } from '../../lib/icons';
   import { RED_FLAG_LABEL, REGION_LABEL, SYMPTOM_LABEL } from '../../lib/labels';
+  import { addDays } from '../../lib/mission';
   import { app, navigate, refresh } from '../../lib/state.svelte';
   import { openSymptoms } from '../../lib/symptoms';
   import Ticker from '../../lib/Ticker.svelte';
   import {
+    BASELINE_DAYS,
     BODY_REGIONS,
     FLUID_MAX_L,
     MINUTES_PER_DAY,
@@ -118,7 +120,8 @@
 
   const SYMPTOM_FIELDS = ['kind', 'severity', 'region', 'treated', 'improved'];
   const REQUIRED = 'Enter a value.';
-  const HHMM = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+  const TIME_FORMAT = 'Enter a time as HH:MM or HHMM.';
+  const HHMM = /^([01]?\d|2[0-3]):?([0-5]\d)$/;
 
   let view = $state.raw<DayView | null>(null);
   let loading = $state(true);
@@ -148,6 +151,13 @@
 
   let draft = $state<Symptom>(newSymptom());
 
+  const firstDay = $derived.by(() => {
+    const mission = app.day?.mission;
+    if (!mission) return undefined;
+    const first = addDays(mission.today, -mission.mission_day - BASELINE_DAYS);
+    return first < mission.today ? first : mission.today;
+  });
+
   const sleepHours = $derived(
     sleepStart && sleepEnd
       ? ((timeToMin(sleepEnd) - timeToMin(sleepStart) + MINUTES_PER_DAY) % MINUTES_PER_DAY) / 60
@@ -157,6 +167,10 @@
   function clockText(text: string): string {
     const m = HHMM.exec(text.trim());
     return m ? `${m[1].padStart(2, '0')}:${m[2]}` : '';
+  }
+
+  function timeError(text: string): string {
+    return text.trim() ? TIME_FORMAT : REQUIRED;
   }
 
   function newSymptom(): Symptom {
@@ -265,8 +279,8 @@
     const resistive = numbers.exercise_resistive_min;
     const aerobic = numbers.exercise_aerobic_min;
     const missing: FieldError[] = [];
-    if (!sleepStart) missing.push({ field: 'answers.sleep_start_min', message: REQUIRED });
-    if (!sleepEnd) missing.push({ field: 'answers.sleep_end_min', message: REQUIRED });
+    if (!sleepStart) missing.push({ field: 'answers.sleep_start_min', message: timeError(startText) });
+    if (!sleepEnd) missing.push({ field: 'answers.sleep_end_min', message: timeError(endText) });
     if (fluid == null) missing.push({ field: 'answers.fluid_l', message: REQUIRED });
     for (const key of ['exercise_resistive_min', 'exercise_aerobic_min'] as const) {
       const message = minutesError(numbers[key]);
@@ -399,6 +413,7 @@
       <input
         type="date"
         value={app.route.date ?? app.day?.mission.today ?? ''}
+        min={firstDay}
         max={app.day?.mission.today}
         aria-invalid={invalid('date')}
         onchange={(e) => {

@@ -41,7 +41,7 @@ Each input is something an astronaut can do alone, with no medical device.
 - 4 levels: OK, self-care, tell the CMO, flight surgeon.
 
 **Speaker notes**
-The tool does not compare an astronaut with a population. It compares the astronaut with themselves before the flight. A drift score of 2 gives self-care. A score of 3 gives "tell the CMO". Red flags go directly to the flight surgeon.
+The tool does not compare an astronaut with a population. It compares the astronaut with themselves before the flight. A drift score of 2 gives self-care. For the PVT-B, a score of 3 gives "tell the CMO". For mood, stress and tiredness, a score of 2 or more on each of 8 days in a row gives "tell the CMO". Red flags go directly to the flight surgeon.
 
 ## 5. Rules with sources
 

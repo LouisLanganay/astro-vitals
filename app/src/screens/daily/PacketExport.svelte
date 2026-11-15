@@ -191,7 +191,7 @@
       <div class="plain">
         <div>
           <span class="lbl">Rules that fired ({packet.fired.length})</span>
-          {#each packet.fired as rule (rule.rule_id)}
+          {#each packet.fired as rule (rule.rule_id + JSON.stringify(rule.subject))}
             {@const fact = ruleFact(rule)}
             <div class="kv">
               <span>{ruleTitle(rule)}{#if fact}<span class="small muted">, {fact}</span>{/if}</span>
